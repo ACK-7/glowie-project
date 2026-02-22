@@ -703,8 +703,15 @@ class TrackingController extends BaseApiController
                 return $this->errorResponse('Shipment not found', 404);
             }
 
-            // Load relationships
-            $shipment->load(['booking.customer', 'booking.vehicle', 'booking.route']);
+            // Load relationships safely
+            try {
+                $shipment->load(['booking.customer', 'booking.vehicle', 'booking.route']);
+            } catch (Exception $relationException) {
+                Log::warning('Failed to load some relationships', [
+                    'tracking_number' => $trackingNumber,
+                    'error' => $relationException->getMessage()
+                ]);
+            }
 
             // Return comprehensive public-safe information
             $publicData = [
@@ -721,14 +728,14 @@ class TrackingController extends BaseApiController
                 
                 // Location information
                 'current_location' => $shipment->current_location ?? 'In transit',
-                'origin' => $shipment->departure_port ?? $shipment->booking->route->origin_city ?? 'Origin',
-                'destination' => $shipment->arrival_port ?? $shipment->booking->route->destination_city ?? 'Destination',
+                'origin' => $shipment->departure_port ?? ($shipment->booking->route->origin_city ?? 'Origin'),
+                'destination' => $shipment->arrival_port ?? ($shipment->booking->route->destination_city ?? 'Destination'),
                 'route' => ($shipment->departure_port ?? 'Origin') . ' → ' . ($shipment->arrival_port ?? 'Destination'),
                 
                 // Vehicle information
-                'vehicle_info' => $this->getVehicleInfo($shipment->booking),
+                'vehicle_info' => $this->getVehicleInfo($shipment->booking ?? null),
                 'vin' => $shipment->booking->vehicle->vin ?? null,
-                'make_model' => $this->getMakeModel($shipment->booking),
+                'make_model' => $this->getMakeModel($shipment->booking ?? null),
                 'year' => $shipment->booking->vehicle->year ?? null,
                 
                 // Customer information (limited)
@@ -748,7 +755,8 @@ class TrackingController extends BaseApiController
         } catch (Exception $e) {
             Log::error('Failed to retrieve public tracking data', [
                 'tracking_number' => $trackingNumber,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             
             return $this->errorResponse('Failed to retrieve tracking information', 500);

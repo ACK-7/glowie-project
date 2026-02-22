@@ -16,21 +16,28 @@ class CustomCorsMiddleware
      */
     public function handle(Request $request, Closure $next)
     {
+        $origin = $request->headers->get('Origin');
+        $allowedOrigin = $this->getAllowedOrigin($request);
+
         // Handle preflight OPTIONS requests
         if ($request->getMethod() === "OPTIONS") {
-            $response = response('', 200);
-        } else {
-            $response = $next($request);
+            return response('', 200)
+                ->header('Access-Control-Allow-Origin', $allowedOrigin)
+                ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Accept, Authorization, Content-Type, X-Requested-With, X-CSRF-TOKEN, X-XSRF-TOKEN, Origin, Cache-Control, Pragma')
+                ->header('Access-Control-Allow-Credentials', 'true')
+                ->header('Access-Control-Max-Age', '86400');
         }
 
-        // Add CORS headers
-        $response->headers->set('Access-Control-Allow-Origin', $this->getAllowedOrigin($request));
-        $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-        $response->headers->set('Access-Control-Allow-Headers', 'Accept, Authorization, Content-Type, X-Requested-With, X-CSRF-TOKEN, X-XSRF-TOKEN, Origin, Cache-Control, Pragma');
-        $response->headers->set('Access-Control-Allow-Credentials', 'true');
-        $response->headers->set('Access-Control-Max-Age', '86400');
+        $response = $next($request);
 
-        return $response;
+        // Add CORS headers to response
+        return $response
+            ->header('Access-Control-Allow-Origin', $allowedOrigin)
+            ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Accept, Authorization, Content-Type, X-Requested-With, X-CSRF-TOKEN, X-XSRF-TOKEN, Origin, Cache-Control, Pragma')
+            ->header('Access-Control-Allow-Credentials', 'true')
+            ->header('Access-Control-Max-Age', '86400');
     }
 
     /**

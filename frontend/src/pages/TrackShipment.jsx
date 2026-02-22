@@ -4,6 +4,8 @@ import { FaSearch, FaMap, FaList, FaShip, FaTruck, FaCheckCircle, FaInfoCircle, 
 import TrackingMap from '../components/Tracking/TrackingMap';
 import TrackingTimeline from '../components/Tracking/TrackingTimeline';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+
 const TrackShipment = () => {
   const { trackingNumber: urlTrackingNumber } = useParams();
   const [searchParams] = useSearchParams();
@@ -24,7 +26,7 @@ const TrackShipment = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`/api/tracking/${trackingNumber}`);
+      const response = await fetch(`${API_BASE_URL}/tracking/${trackingNumber}`);
       if (!response.ok) {
         throw new Error('Shipment not found');
       }
