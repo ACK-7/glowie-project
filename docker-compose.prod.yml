@@ -1,0 +1,80 @@
+version: '3.9'
+
+services:
+  mysql:
+    container_name: shipwithglowie-mysql-prod
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql_prod_data:/var/lib/mysql
+    networks:
+      - shipwithglowie-prod-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 5s
+      retries: 10
+
+  redis:
+    container_name: shipwithglowie-redis-prod
+    image: redis:7-alpine
+    volumes:
+      - redis_prod_data:/data
+    networks:
+      - shipwithglowie-prod-network
+    restart: always
+
+  backend:
+    container_name: shipwithglowie-backend-prod
+    image: shipwithglowie/backend:latest
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile
+    environment:
+      APP_ENV: production
+      APP_DEBUG: 'false'
+      APP_KEY: ${APP_KEY}
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      CACHE_DRIVER: redis
+      QUEUE_CONNECTION: redis
+    depends_on:
+      - mysql
+      - redis
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend_storage:/var/www/html/storage
+    networks:
+      - shipwithglowie-prod-network
+    restart: always
+
+  frontend:
+    container_name: shipwithglowie-frontend-prod
+    image: shipwithglowie/frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - shipwithglowie-prod-network
+    restart: always
+
+volumes:
+  mysql_prod_data:
+  redis_prod_data:
+  backend_storage:
+
+networks:
+  shipwithglowie-prod-network:
+    driver: bridge

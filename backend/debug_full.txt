@@ -1,0 +1,22 @@
+
+Fatal error: Uncaught ReflectionException: Class "config" does not exist in /var/www/html/vendor/laravel/framework/src/Illuminate/Container/Container.php:912
+Stack trace:
+#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Container/Container.php(912): ReflectionClass->__construct('config')
+#1 /var/www/html/vendor/laravel/framework/src/Illuminate/Container/Container.php(795): Illuminate\Container\Container->build('config')
+#2 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(986): Illuminate\Container\Container->resolve('config', Array, true)
+#3 /var/www/html/vendor/laravel/framework/src/Illuminate/Container/Container.php(731): Illuminate\Foundation\Application->resolve('config', Array)
+#4 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(971): Illuminate\Container\Container->make('config', Array)
+#5 /var/www/html/vendor/laravel/framework/src/Illuminate/Container/Container.php(1454): Illuminate\Foundation\Application->make('config')
+#6 /var/www/html/debug_internal.php(4): Illuminate\Container\Container->offsetGet('config')
+#7 {main}
+
+Next Illuminate\Contracts\Container\BindingResolutionException: Target class [config] does not exist. in /var/www/html/vendor/laravel/framework/src/Illuminate/Container/Container.php:914
+Stack trace:
+#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Container/Container.php(795): Illuminate\Container\Container->build('config')
+#1 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(986): Illuminate\Container\Container->resolve('config', Array, true)
+#2 /var/www/html/vendor/laravel/framework/src/Illuminate/Container/Container.php(731): Illuminate\Foundation\Application->resolve('config', Array)
+#3 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(971): Illuminate\Container\Container->make('config', Array)
+#4 /var/www/html/vendor/laravel/framework/src/Illuminate/Container/Container.php(1454): Illuminate\Foundation\Application->make('config')
+#5 /var/www/html/debug_internal.php(4): Illuminate\Container\Container->offsetGet('config')
+#6 {main}
+  thrown in /var/www/html/vendor/laravel/framework/src/Illuminate/Container/Container.php on line 914

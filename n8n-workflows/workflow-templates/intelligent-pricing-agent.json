@@ -1,0 +1,93 @@
+{
+  "name": "Intelligent Pricing Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "pricing/trigger",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "boolean": [
+            {
+              "name": "isActive",
+              "value": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Set Active",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/admin/pricing/update",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "route_id",
+              "value": "={{ $json.route_id }}"
+            },
+            {
+              "name": "new_price",
+              "value": "={{ $json.calculated_price }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Update Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        680,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Set Active",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Active": {
+      "main": [
+        [
+          {
+            "node": "Update Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "staticData": null
+}

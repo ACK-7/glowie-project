@@ -1,0 +1,15 @@
+name: Docker Deploy
+
+on:
+  workflow_run:
+    workflows: ["Docker Build and Deploy"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Deploy to production
+        run: echo "Deploy to production server"

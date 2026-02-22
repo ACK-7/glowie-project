@@ -1,0 +1,204 @@
+version: "3.9"
+
+services:
+  # MySQL Database
+  mysql:
+    container_name: shipwithglowie-mysql
+    image: mysql:8.0
+    build:
+      context: ./docker/mysql
+      dockerfile: Dockerfile
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_DATABASE:-shipwithglowie}
+      MYSQL_USER: ${DB_USERNAME:-shipuser}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-shippass}
+      MYSQL_ROOT_HOST: "%"
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./backend/database:/docker-entrypoint-initdb.d
+    networks:
+      - shipwithglowie-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    container_name: shipwithglowie-redis
+    image: redis:7-alpine
+    build:
+      context: ./docker/redis
+      dockerfile: Dockerfile
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - shipwithglowie-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # phpMyAdmin
+  phpmyadmin:
+    container_name: shipwithglowie-phpmyadmin
+    image: phpmyadmin/phpmyadmin:latest
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      UPLOAD_LIMIT: 100M
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    networks:
+      - shipwithglowie-network
+    restart: unless-stopped
+
+  # Laravel Backend API
+  backend:
+    container_name: shipwithglowie-backend
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_KEY: ${APP_KEY}
+      APP_URL: ${APP_URL:-http://localhost:8000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      VIEW_COMPILED_PATH: /var/www/html/storage/framework/views
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-shipwithglowie}
+      DB_USERNAME: ${DB_USERNAME:-shipuser}
+      DB_PASSWORD: ${DB_PASSWORD:-shippass}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: null
+      REDIS_PORT: 6379
+      CACHE_DRIVER: file
+      QUEUE_CONNECTION: sync
+      SESSION_DRIVER: file
+      # Mail Configuration - Use environment variables for easy switching
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-mailhog}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USERNAME: ${MAIL_USERNAME:-null}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-null}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-null}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-noreply@shipwithglowie.com}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-ShipWithGlowie}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - ./backend:/var/www/html
+      # Preserve container-built vendor to avoid host overlay issues
+      - /var/www/html/vendor
+      - ./backend/storage:/var/www/html/storage
+      - ./backend/bootstrap/cache:/var/www/html/bootstrap/cache
+    networks:
+      - shipwithglowie-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    restart: on-failure:5
+
+  # React Frontend
+  frontend:
+    container_name: shipwithglowie-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: builder
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000/api}
+        VITE_APP_NAME: ${VITE_APP_NAME:-ShipWithGlowie Auto}
+    command: npm run dev -- --host
+    environment:
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:8000/api}
+      - VITE_APP_NAME=${VITE_APP_NAME:-ShipWithGlowie Auto}
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    networks:
+      - shipwithglowie-network
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # n8n AI Workflows
+  n8n:
+    container_name: shipwithglowie-n8n
+    image: n8nio/n8n:latest
+    environment:
+      DB_TYPE: mysql
+      DB_MYSQL_HOST: mysql
+      DB_MYSQL_PORT: 3306
+      DB_MYSQL_DATABASE: ${N8N_DATABASE:-n8n}
+      DB_MYSQL_USER: ${N8N_USER:-n8nuser}
+      DB_MYSQL_PASSWORD: ${N8N_PASSWORD:-n8npass}
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-admin}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-admin123}
+      WEBHOOK_URL: http://localhost:5678/
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n-workflows:/home/node/.n8n/workflows
+    networks:
+      - shipwithglowie-network
+    restart: unless-stopped
+
+  # Mailhog for Email Testing
+  mailhog:
+    container_name: shipwithglowie-mailhog
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025"  # SMTP port
+      - "8025:8025"  # Web UI port
+    networks:
+      - shipwithglowie-network
+    restart: unless-stopped
+
+networks:
+  shipwithglowie-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+  n8n_data:
+    driver: local
+  frontend_node_modules:
+    driver: local
