@@ -128,26 +128,87 @@ class NotificationService
     }
 
     /**
-     * Send quote approved notification with login credentials
+     * Send quote created notification WITH login credentials (for new customers)
+     */
+    public function sendQuoteCreatedWithCredentials(Quote $quote, string $temporaryPassword): void
+    {
+        try {
+            $customer = Customer::find($quote->customer_id);
+            $portalUrl = config('app.frontend_url', 'http://localhost:5173') . '/customer-portal';
+            
+            $message = "Thank you for requesting a quote with ShipWithGlowie Auto!\n\n";
+            $message .= "Your quote {$quote->quote_reference} has been generated and is pending approval.\n\n";
+            $message .= "📊 Quote Details:\n";
+            $message .= "- Total Amount: " . number_format($quote->total_amount, 2) . " {$quote->currency}\n";
+            $message .= "- Valid Until: " . $quote->valid_until->format('M d, Y') . "\n\n";
+            $message .= "🔐 Your Customer Portal Access:\n";
+            $message .= "Email: {$customer->email}\n";
+            $message .= "Temporary Password: {$temporaryPassword}\n";
+            $message .= "Portal URL: {$portalUrl}\n\n";
+            $message .= "You can now log in to your customer portal to:\n";
+            $message .= "✓ View your quote status\n";
+            $message .= "✓ Accept your quote when approved\n";
+            $message .= "✓ Track your shipment\n";
+            $message .= "✓ Upload documents\n";
+            $message .= "✓ Manage your bookings\n\n";
+            $message .= "Please change your password after your first login for security.\n\n";
+            $message .= "We'll notify you once your quote is approved!";
+            
+            $this->createNotification([
+                'notifiable_type' => Customer::class,
+                'notifiable_id' => $quote->customer_id,
+                'type' => 'quote_created_with_credentials',
+                'title' => 'Quote Generated - Portal Access Included',
+                'message' => $message,
+                'data' => [
+                    'quote_id' => $quote->id,
+                    'quote_reference' => $quote->quote_reference,
+                    'total_amount' => $quote->total_amount,
+                    'currency' => $quote->currency,
+                    'valid_until' => $quote->valid_until,
+                    'customer_email' => $customer->email,
+                    'has_login_credentials' => true,
+                    'portal_url' => $portalUrl,
+                    'temporary_password' => $temporaryPassword,
+                ],
+                'channels' => ['database', 'email']
+            ]);
+            
+            Log::info('✅ Quote created with credentials notification sent', [
+                'quote_id' => $quote->id,
+                'customer_email' => $customer->email
+            ]);
+            
+        } catch (Exception $e) {
+            Log::error('Failed to send quote created with credentials notification', [
+                'quote_id' => $quote->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Send quote approved notification (simple - credentials already sent)
      */
     public function sendQuoteApprovedNotification(Quote $quote, string $temporaryPassword = null): void
     {
         try {
             $customer = Customer::find($quote->customer_id);
+            $portalUrl = config('app.frontend_url', 'http://localhost:5173') . '/customer-portal';
             
-            // Base message
-            $message = "Your quote {$quote->quote_reference} has been approved! You can now proceed with booking.";
-            
-            // Add login credentials if provided
-            if ($temporaryPassword && $customer) {
-                $message .= "\n\nYour Customer Portal Login Details:\nEmail: {$customer->email}\nTemporary Password: {$temporaryPassword}\n\nPlease log in to your customer portal to confirm your booking and track your shipment.";
-            }
+            // Simple approval message - customer already has portal access
+            $message = "Great news! Your quote {$quote->quote_reference} has been approved!\n\n";
+            $message .= "📊 Quote Details:\n";
+            $message .= "- Total Amount: " . number_format($quote->total_amount, 2) . " {$quote->currency}\n";
+            $message .= "- Valid Until: " . $quote->valid_until->format('M d, Y') . "\n\n";
+            $message .= "You can now log in to your customer portal to accept this quote and proceed with booking.\n\n";
+            $message .= "Portal URL: {$portalUrl}";
             
             $this->createNotification([
                 'notifiable_type' => Customer::class,
                 'notifiable_id' => $quote->customer_id,
                 'type' => 'quote_approved',
-                'title' => 'Quote Approved - Login Credentials Included',
+                'title' => 'Quote Approved - Ready to Accept',
                 'message' => $message,
                 'data' => [
                     'quote_id' => $quote->id,
@@ -155,10 +216,9 @@ class NotificationService
                     'total_amount' => $quote->total_amount,
                     'valid_until' => $quote->valid_until,
                     'customer_email' => $customer->email ?? null,
-                    'has_login_credentials' => !empty($temporaryPassword),
-                    'portal_url' => config('app.frontend_url') . '/customer-portal',
+                    'portal_url' => $portalUrl,
                 ],
-                'channels' => ['database', 'email', 'sms']
+                'channels' => ['database', 'email']
             ]);
             
         } catch (Exception $e) {
@@ -507,6 +567,26 @@ class NotificationService
                         ->send(new \App\Mail\QuoteApprovedMail($quote, $password));
                     
                     Log::info('✅ Quote Approved Email Sent', [
+                        'to' => $customer->email,
+                        'quote_reference' => $quote->quote_reference,
+                        'has_credentials' => !empty($password)
+                    ]);
+                    
+                    return;
+                }
+            }
+
+            // Send actual email for quote created with credentials
+            if ($notification->type === 'quote_created_with_credentials' && isset($notification->data['quote_id'])) {
+                $quote = Quote::with(['customer', 'route'])->find($notification->data['quote_id']);
+                if ($quote) {
+                    $password = $notification->data['temporary_password'] ?? null;
+                    
+                    // Send welcome email with credentials
+                    \Illuminate\Support\Facades\Mail::to($customer->email)
+                        ->send(new \App\Mail\QuoteCreatedWithCredentialsMail($quote, $password));
+                    
+                    Log::info('✅ Quote Created with Credentials Email Sent', [
                         'to' => $customer->email,
                         'quote_reference' => $quote->quote_reference,
                         'has_credentials' => !empty($password)

@@ -1,0 +1,29 @@
+# Minimal requirements to get Quote Agent working
+# Install this first, then add more packages as needed
+
+# Core Framework
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+
+# LangChain & LangGraph (Core AI)
+langchain
+langchain-mistralai
+langgraph
+
+# Mistral AI
+mistralai
+
+# Database & Caching
+redis
+pymysql
+sqlalchemy
+
+# HTTP Client
+httpx
+
+# Utilities
+python-dotenv
+loguru
+python-dateutil

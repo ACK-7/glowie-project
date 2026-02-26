@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  ai-service:
+    build: .
+    container_name: shipwithglowie-ai-service
+    ports:
+      - "8001:8001"
+    environment:
+      - APP_ENV=development
+      - DEBUG=true
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - REDIS_HOST=redis
+      - DB_HOST=mysql
+      - LARAVEL_API_URL=http://backend:8000/api
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+    depends_on:
+      - redis
+    networks:
+      - shipwithglowie-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: ai-service-redis
+    ports:
+      - "6380:6379"
+    networks:
+      - shipwithglowie-network
+    restart: unless-stopped
+
+networks:
+  shipwithglowie-network:
+    external: true

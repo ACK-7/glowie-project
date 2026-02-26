@@ -1,38 +1,72 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { FaCar, FaShip, FaCalculator, FaCheckCircle } from 'react-icons/fa';
 import axios from 'axios';
 
 // API Base URL
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 const GetQuote = () => {
+  const [searchParams] = useSearchParams();
+  const vehicleSlug = searchParams.get('vehicle');
+  
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
-    // Vehicle Details
     vehicleType: '',
     year: '',
     make: '',
     model: '',
     engineSize: '',
-    
-    // Shipping Details
     originCountry: '',
     originPort: '',
     shippingMethod: '',
-    
-    // Personal Details
     fullName: '',
     email: '',
     phone: '',
     deliveryLocation: '',
-    
-    // Additional
     additionalInfo: ''
   });
 
   const [estimatedQuote, setEstimatedQuote] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const mapCategoryToVehicleType = (categoryName) => {
+    if (!categoryName) return '';
+    const categoryLower = categoryName.toLowerCase();
+    const mapping = {
+      'sedan': 'sedan',
+      'suv': 'suv',
+      'truck': 'truck',
+      'van': 'van',
+      'luxury': 'luxury',
+      'motorcycle': 'motorcycle'
+    };
+    return mapping[categoryLower] || '';
+  };
+
+  useEffect(() => {
+    if (vehicleSlug) {
+      setIsLoading(true);
+      axios.get(`${API_BASE_URL}/cars/${vehicleSlug}`)
+        .then(response => {
+          const car = response.data.data || response.data;
+          setFormData(prev => ({
+            ...prev,
+            year: car.year?.toString() || '',
+            make: car.brand?.name || car.make || '',
+            model: car.model || '',
+            engineSize: car.engine_size?.toString() || car.engineSize?.toString() || '',
+            vehicleType: mapCategoryToVehicleType(car.category?.name) || ''
+          }));
+          setIsLoading(false);
+        })
+        .catch(err => {
+          console.error('Failed to load vehicle details:', err);
+          setIsLoading(false);
+        });
+    }
+  }, [vehicleSlug]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -50,47 +84,18 @@ const GetQuote = () => {
     try {
         const response = await axios.post(`${API_BASE_URL}/quotes`, formData);
         
-        // Use the returned calculated totals
-        const { quote_id, reference, total_estimated } = response.data;
-        
-        // Construct the display object based on total (simplifying breakdown for now as backend returns total)
-        // Ideally backend returns full breakdown. For now we use the logic consistent with backend.
-        
-        // Re-calculate breakdown purely for display based on returned total if needed, 
-        // OR just rely on what we have. 
-        // Let's stick to the backend's returned total and approximate the breakdown or 
-        // update backend to return full breakdown. 
-        // For this iteration, we will use the FRONTEND logic for breakdown to match the total,
-        // trusting the simple logic matches.
-        
-        // Actually, let's just use the frontend logic to display the breakdown, 
-        // assuming backend matches (it does in our implementation).
-        
-        const baseRates = {
-          'japan': { roro: 1500, container: 2200 },
-          'uk': { roro: 1800, container: 2800 },
-          'uae': { roro: 1100, container: 1600 }
-        };
-        const origin = formData.originCountry.toLowerCase();
-        const method = formData.shippingMethod;
-        const shippingCost = (baseRates[origin] && baseRates[origin][method]) ? baseRates[origin][method] : 0;
-        const containerMarkup = method === 'container' && origin === 'uae' ? 0 : (method === 'container' ? 500 : 0); // Backend handles container differently? 
-        // Wait, backend: $shippingCost = $route->base_price; if (container) += 500.
-        // Frontend logic in component was: Japan RoRo 1500.
-        // Backend seed: Japan 1500.
-        // So backend logic: 1500 + (container? 500 : 0).
-        // Frontend logic: Japan Container 2200? (1500+700). 
-        // There is a slight mismatch. 
-        
-        // Let's trust the BACKEND total.
+        const { reference, total_estimated, breakdown, ai_reasoning, confidence_score, ai_powered } = response.data;
         
         setEstimatedQuote({
-            shipping: shippingCost, // Placeholder
-            customs: 800,
-            vat: 0, // Recalc below
-            levies: 350,
+            shipping: breakdown?.shipping || 0,
+            customs: breakdown?.customs_duty || 800,
+            vat: breakdown?.vat || 0,
+            levies: breakdown?.levies || 350,
             total: total_estimated,
-            reference: reference
+            reference: reference,
+            ai_reasoning: ai_reasoning,
+            confidence_score: confidence_score,
+            ai_powered: ai_powered
         });
 
         setCurrentStep(4);
@@ -132,17 +137,15 @@ const GetQuote = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      {/* Hero */}
       <section className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 text-white py-20">
         <div className="container-custom text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-6">Get Your Free Quote</h1>
           <p className="text-xl text-blue-100 max-w-3xl mx-auto">
-            Fill in your details and get an instant, transparent quote for shipping your car to Uganda.
+            Fill in your details and get an instant, AI-powered transparent quote for shipping your car to Uganda.
           </p>
         </div>
       </section>
 
-      {/* Progress Steps */}
       <section className="section-padding pt-12">
         <div className="container-custom max-w-4xl mx-auto">
           <div className="flex justify-between mb-12">
@@ -160,16 +163,10 @@ const GetQuote = () => {
                 }`}>
                   {step.title}
                 </p>
-                {index < steps.length - 1 && (
-                  <div className={`hidden md:block h-1 w-full mt-8 -mx-16 ${
-                    currentStep > step.number ? 'bg-blue-600' : 'bg-gray-200'
-                  }`} style={{ position: 'absolute', top: '32px', zIndex: -1 }}></div>
-                )}
               </div>
             ))}
           </div>
 
-          {/* Form */}
           <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
             {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
@@ -178,23 +175,15 @@ const GetQuote = () => {
             )}
           
             <form onSubmit={handleSubmit}>
-              {/* Step 1: Vehicle Information */}
               {currentStep === 1 && (
                 <div className="space-y-6">
                   <h2 className="text-2xl font-bold text-navy-900 mb-6">Tell Us About Your Vehicle</h2>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Vehicle Type *
-                      </label>
-                      <select
-                        name="vehicleType"
-                        value={formData.vehicleType}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        required
-                      >
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Vehicle Type *</label>
+                      <select name="vehicleType" value={formData.vehicleType} onChange={handleInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                         <option value="">Select type</option>
                         <option value="sedan">Sedan</option>
                         <option value="suv">SUV / 4x4</option>
@@ -204,126 +193,63 @@ const GetQuote = () => {
                         <option value="motorcycle">Motorcycle</option>
                       </select>
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Year *
-                      </label>
-                      <input
-                        type="number"
-                        name="year"
-                        value={formData.year}
-                        onChange={handleInputChange}
-                        placeholder="e.g., 2020"
-                        min="1990"
-                        max="2025"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        required
-                      />
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Year *</label>
+                      <input type="number" name="year" value={formData.year} onChange={handleInputChange}
+                        placeholder="e.g., 2020" min="1990" max="2025"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Make *
-                      </label>
-                      <input
-                        type="text"
-                        name="make"
-                        value={formData.make}
-                        onChange={handleInputChange}
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Make *</label>
+                      <input type="text" name="make" value={formData.make} onChange={handleInputChange}
                         placeholder="e.g., Toyota"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        required
-                      />
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Model
-                      </label>
-                      <input
-                        type="text"
-                        name="model"
-                        value={formData.model}
-                        onChange={handleInputChange}
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Model</label>
+                      <input type="text" name="model" value={formData.model} onChange={handleInputChange}
                         placeholder="e.g., Land Cruiser"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
                     </div>
-
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Engine Size (cc)
-                      </label>
-                      <input
-                        type="number"
-                        name="engineSize"
-                        value={formData.engineSize}
-                        onChange={handleInputChange}
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Engine Size (cc)</label>
+                      <input type="number" name="engineSize" value={formData.engineSize} onChange={handleInputChange}
                         placeholder="e.g., 2500"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Step 2: Shipping Details */}
               {currentStep === 2 && (
                 <div className="space-y-6">
                   <h2 className="text-2xl font-bold text-navy-900 mb-6">Shipping Information</h2>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Origin Country *
-                      </label>
-                      <select
-                        name="originCountry"
-                        value={formData.originCountry}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        required
-                      >
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Origin Country *</label>
+                      <select name="originCountry" value={formData.originCountry} onChange={handleInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                         <option value="">Select country</option>
                         <option value="japan">🇯🇵 Japan</option>
                         <option value="uk">🇬🇧 United Kingdom</option>
                         <option value="uae">🇦🇪 UAE (Dubai)</option>
                       </select>
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Origin Port
-                      </label>
-                      <input
-                        type="text"
-                        name="originPort"
-                        value={formData.originPort}
-                        onChange={handleInputChange}
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Origin Port</label>
+                      <input type="text" name="originPort" value={formData.originPort} onChange={handleInputChange}
                         placeholder="e.g., Tokyo, Southampton, Dubai"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
                     </div>
-
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-3">
-                        Shipping Method *
-                      </label>
+                      <label className="block text-sm font-medium text-gray-700 mb-3">Shipping Method *</label>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <label className={`border-2 rounded-lg p-6 cursor-pointer transition ${
-                          formData.shippingMethod === 'roro'
-                            ? 'border-blue-600 bg-blue-50'
-                            : 'border-gray-200 hover:border-blue-300'
+                          formData.shippingMethod === 'roro' ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-blue-300'
                         }`}>
-                          <input
-                            type="radio"
-                            name="shippingMethod"
-                            value="roro"
-                            checked={formData.shippingMethod === 'roro'}
-                            onChange={handleInputChange}
-                            className="sr-only"
-                          />
+                          <input type="radio" name="shippingMethod" value="roro" checked={formData.shippingMethod === 'roro'}
+                            onChange={handleInputChange} className="sr-only" />
                           <div className="flex items-start gap-3">
                             <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                               <FaShip className="text-blue-600 text-xl" />
@@ -334,20 +260,11 @@ const GetQuote = () => {
                             </div>
                           </div>
                         </label>
-
                         <label className={`border-2 rounded-lg p-6 cursor-pointer transition ${
-                          formData.shippingMethod === 'container'
-                            ? 'border-blue-600 bg-blue-50'
-                            : 'border-gray-200 hover:border-blue-300'
+                          formData.shippingMethod === 'container' ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-blue-300'
                         }`}>
-                          <input
-                            type="radio"
-                            name="shippingMethod"
-                            value="container"
-                            checked={formData.shippingMethod === 'container'}
-                            onChange={handleInputChange}
-                            className="sr-only"
-                          />
+                          <input type="radio" name="shippingMethod" value="container" checked={formData.shippingMethod === 'container'}
+                            onChange={handleInputChange} className="sr-only" />
                           <div className="flex items-start gap-3">
                             <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                               <FaShip className="text-blue-600 text-xl" />
@@ -364,90 +281,45 @@ const GetQuote = () => {
                 </div>
               )}
 
-              {/* Step 3: Personal Details */}
               {currentStep === 3 && (
                 <div className="space-y-6">
                   <h2 className="text-2xl font-bold text-navy-900 mb-6">Your Contact Information</h2>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Full Name *
-                      </label>
-                      <input
-                        type="text"
-                        name="fullName"
-                        value={formData.fullName}
-                        onChange={handleInputChange}
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                      <input type="text" name="fullName" value={formData.fullName} onChange={handleInputChange}
                         placeholder="John Doe"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        required
-                      />
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email Address *
-                      </label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
+                      <input type="email" name="email" value={formData.email} onChange={handleInputChange}
                         placeholder="john@example.com"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        required
-                      />
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Phone Number *
-                      </label>
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                      <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange}
                         placeholder="+256 700 000 000"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        required
-                      />
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
                     </div>
-
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Delivery Location in Uganda
-                      </label>
-                      <input
-                        type="text"
-                        name="deliveryLocation"
-                        value={formData.deliveryLocation}
-                        onChange={handleInputChange}
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Location in Uganda</label>
+                      <input type="text" name="deliveryLocation" value={formData.deliveryLocation} onChange={handleInputChange}
                         placeholder="e.g., Kampala, Entebbe, Jinja"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        required
-                      />
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
                     </div>
-
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Additional Information
-                      </label>
-                      <textarea
-                        name="additionalInfo"
-                        value={formData.additionalInfo}
-                        onChange={handleInputChange}
-                        rows="4"
-                        placeholder="Any special requirements or questions..."
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      ></textarea>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Additional Information</label>
+                      <textarea name="additionalInfo" value={formData.additionalInfo} onChange={handleInputChange}
+                        rows="4" placeholder="Any special requirements or questions..."
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Step 4: Quote Display */}
               {currentStep === 4 && estimatedQuote && (
                 <div className="space-y-6">
                   <div className="text-center mb-8">
@@ -456,13 +328,44 @@ const GetQuote = () => {
                     </div>
                     <h2 className="text-3xl font-bold text-navy-900 mb-2">Your Estimated Quote</h2>
                     <p className="text-gray-600 text-lg">Reference: <span className="font-bold text-blue-600">{estimatedQuote.reference}</span></p>
-                    <p className="text-gray-600">Here's a breakdown of the estimated costs</p>
+                    {estimatedQuote.ai_powered && (
+                      <div className="inline-flex items-center gap-2 mt-2 px-4 py-2 bg-purple-50 border border-purple-200 rounded-full">
+                        <span className="text-2xl">🤖</span>
+                        <span className="text-sm font-medium text-purple-700">AI-Powered Quote</span>
+                      </div>
+                    )}
                   </div>
+
+                  {estimatedQuote.ai_reasoning && (
+                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-6 mb-6">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 text-3xl">💡</div>
+                        <div className="flex-1">
+                          <h3 className="font-bold text-gray-900 mb-2">AI Pricing Analysis</h3>
+                          <p className="text-gray-700 text-sm leading-relaxed mb-3">{estimatedQuote.ai_reasoning}</p>
+                          {estimatedQuote.confidence_score && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-medium text-gray-600">Confidence:</span>
+                              <div className="flex-1 max-w-xs bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-500"
+                                  style={{ width: `${(estimatedQuote.confidence_score * 100).toFixed(0)}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-xs font-bold text-purple-700">
+                                {(estimatedQuote.confidence_score * 100).toFixed(0)}%
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="bg-gray-50 rounded-xl p-6 space-y-4">
                     <div className="flex justify-between items-center pb-3 border-b border-gray-200">
                       <span className="text-gray-700">Ocean Freight ({formData.shippingMethod.toUpperCase()})</span>
-                      <span className="font-semibold">{estimatedQuote.shipping ? `$${estimatedQuote.shipping.toLocaleString()}` : 'TBD'}</span>
+                      <span className="font-semibold">${estimatedQuote.shipping.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between items-center pb-3 border-b border-gray-200">
                       <span className="text-gray-700">Customs Duty (Estimated)</span>
@@ -470,7 +373,7 @@ const GetQuote = () => {
                     </div>
                     <div className="flex justify-between items-center pb-3 border-b border-gray-200">
                       <span className="text-gray-700">VAT (18%)</span>
-                      <span className="font-semibold">Included in details</span>
+                      <span className="font-semibold">${estimatedQuote.vat.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between items-center pb-3 border-b border-gray-200">
                       <span className="text-gray-700">Levies & Fees</span>
@@ -482,58 +385,84 @@ const GetQuote = () => {
                     </div>
                   </div>
 
+                  {/* Portal Access Notification */}
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-6 mt-6">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 text-4xl">🔐</div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-green-900 mb-2">Customer Portal Access Created!</h3>
+                        <p className="text-sm text-green-800 mb-3">
+                          We've sent login credentials to <strong>{formData.email}</strong>. Check your email to access your customer portal where you can:
+                        </p>
+                        <ul className="space-y-2 text-sm text-green-800">
+                          <li className="flex items-center gap-2">
+                            <span className="text-green-600">✓</span>
+                            <span>View your quote status in real-time</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-green-600">✓</span>
+                            <span>Accept your quote when approved</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-green-600">✓</span>
+                            <span>Track your shipment progress</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-green-600">✓</span>
+                            <span>Upload required documents</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-green-600">✓</span>
+                            <span>Manage your bookings</span>
+                          </li>
+                        </ul>
+                        <div className="mt-4 pt-4 border-t border-green-200">
+                          <p className="text-xs text-green-700">
+                            <strong>📧 Check your email</strong> for your temporary password and portal access link.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
                     <p className="text-sm text-gray-700">
-                      <strong>Note:</strong> This is a preliminary estimate saved with reference <strong>{estimatedQuote.reference}</strong>. A member of our team receives this instantly and will contact you ({formData.email}) with the final confirmed invoice.
+                      <strong>Note:</strong> This is a preliminary estimate saved with reference <strong>{estimatedQuote.reference}</strong>. A member of our team will review and approve your quote. You'll be notified via email when it's ready to accept.
                     </p>
                   </div>
 
                   <div className="text-center mt-8">
-                    <button
-                      type="button"
+                    <button type="button"
                       onClick={() => {
                           setCurrentStep(1);
                           setEstimatedQuote(null);
                           setFormData(prev => ({ ...prev, year: '', make: '', model: '' }));
                       }}
-                      className="btn-primary px-12"
-                    >
+                      className="btn-primary px-12">
                       Request New Quote
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* Navigation Buttons */}
               {currentStep < 4 && (
                 <div className="flex gap-4 mt-8 justify-between">
                   {currentStep > 1 && (
-                    <button
-                      type="button"
-                      onClick={prevStep}
-                      className="btn-outline px-8"
-                    >
+                    <button type="button" onClick={prevStep} className="btn-outline px-8">
                       Previous
                     </button>
                   )}
                   <div className="flex-1"></div>
                   {currentStep < 3 && (
-                    <button
-                      type="button"
-                      onClick={nextStep}
-                      disabled={!isStepValid()}
-                      className="btn-primary px-8 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
+                    <button type="button" onClick={nextStep} disabled={!isStepValid()}
+                      className="btn-primary px-8 disabled:opacity-50 disabled:cursor-not-allowed">
                       Next Step
                     </button>
                   )}
                   {currentStep === 3 && (
-                    <button
-                      type="submit"
-                      disabled={!isStepValid() || isLoading}
-                      className="btn-primary px-8 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isLoading ? 'Generating Quote...' : 'Calculate Quote'}
+                    <button type="submit" disabled={!isStepValid() || isLoading}
+                      className="btn-primary px-8 disabled:opacity-50 disabled:cursor-not-allowed">
+                      {isLoading ? 'Generating AI Quote...' : 'Calculate Quote'}
                     </button>
                   )}
                 </div>
@@ -543,7 +472,6 @@ const GetQuote = () => {
         </div>
       </section>
 
-      {/* Trust Signals */}
       <section className="section-padding bg-white">
         <div className="container-custom max-w-5xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
@@ -553,9 +481,9 @@ const GetQuote = () => {
               <p className="text-gray-600 text-sm">Your information is protected and never shared</p>
             </div>
             <div>
-              <div className="text-4xl mb-3">⚡</div>
-              <h3 className="font-bold text-navy-900 mb-2">Instant Quote</h3>
-              <p className="text-gray-600 text-sm">Get your estimate in less than 2 minutes</p>
+              <div className="text-4xl mb-3">🤖</div>
+              <h3 className="font-bold text-navy-900 mb-2">AI-Powered</h3>
+              <p className="text-gray-600 text-sm">Intelligent pricing with market analysis</p>
             </div>
             <div>
               <div className="text-4xl mb-3">🎯</div>

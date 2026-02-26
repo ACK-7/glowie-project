@@ -56,6 +56,9 @@ Route::post('/quotes', [QuoteController::class, 'create']);
 Route::post('/quotes/lookup', [QuoteController::class, 'lookup']);
 Route::post('/bookings/confirm', [BookingController::class, 'create']);
 
+// AI Chatbot (Public)
+Route::post('/chatbot', [ChatbotController::class, 'chat']);
+
 // Public Tracking (no authentication required)
 Route::prefix('tracking')->group(function () {
     Route::get('/{trackingNumber}', [TrackingController::class, 'publicTrack']);

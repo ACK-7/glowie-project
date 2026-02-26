@@ -7,6 +7,7 @@ import { CustomerAuthProvider } from './context/CustomerAuthContext';
 
 // Components
 import ProtectedRoute from './components/Auth/ProtectedRoute';
+import AIChatbot from './components/AIChatbot';
 
 // Layouts
 import PublicLayout from './layouts/PublicLayout';
@@ -120,6 +121,9 @@ function App() {
           {/* 404 Not Found */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        
+        {/* Global AI Chatbot - Available on all pages */}
+        <AIChatbot />
       </Router>
       </CustomerAuthProvider>
     </AuthProvider>

@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\Vehicle;
 use App\Models\Route;
 use App\Services\QuoteService;
+use App\Services\LangGraphService;
 use App\Repositories\Contracts\QuoteRepositoryInterface;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -30,7 +31,8 @@ class QuoteController extends BaseApiController
 {
     public function __construct(
         private QuoteService $quoteService,
-        private QuoteRepositoryInterface $quoteRepository
+        private QuoteRepositoryInterface $quoteRepository,
+        private LangGraphService $langGraphService
     ) {}
 
     /**
@@ -258,7 +260,7 @@ class QuoteController extends BaseApiController
     }
 
     /**
-     * Approve a quote and send login credentials to customer
+     * Approve a quote (credentials already sent at quote creation)
      * 
      * @param Request $request
      * @param int $id
@@ -280,43 +282,27 @@ class QuoteController extends BaseApiController
                 return $this->errorResponse('Only pending quotes can be approved', 400);
             }
             
-            // Get the customer
-            $customer = Customer::find($quote->customer_id);
-            if (!$customer) {
-                return $this->errorResponse('Customer not found', 404);
-            }
-            
-            // Generate temporary password if customer doesn't have one or has a system-generated one
-            // In development mode, always generate a new temporary password for easier testing
-            $temporaryPassword = null;
-            if (!$customer->password || $customer->password_is_temporary || config('app.env') === 'local') {
-                $temporaryPassword = Str::random(12); // Generate 12-character password
-                $customer->password = Hash::make($temporaryPassword);
-                $customer->password_is_temporary = true;
-                $customer->save();
-                
-                Log::info('🔑 TEMPORARY PASSWORD GENERATED (Development)', [
-                    'customer_email' => $customer->email,
-                    'customer_name' => $customer->first_name . ' ' . $customer->last_name,
-                    'temporary_password' => $temporaryPassword,
-                    'quote_reference' => $quote->quote_reference
-                ]);
-            }
-            
             $success = $quote->approve(auth()->id(), $validatedData['notes'] ?? null);
             
             if ($success) {
-                // Store temporary password in session for later use when converting to booking
-                if ($temporaryPassword) {
-                    session(['quote_' . $quote->id . '_temp_password' => $temporaryPassword]);
+                // Send simple approval notification (customer already has portal access)
+                try {
+                    $notificationService = app(\App\Services\NotificationService::class);
+                    $notificationService->sendQuoteApprovedNotification($quote);
+                    
+                    Log::info('✅ Quote approved notification sent', [
+                        'quote_id' => $quote->id,
+                        'customer_email' => $quote->customer->email
+                    ]);
+                } catch (Exception $notificationError) {
+                    Log::error('Failed to send quote approved notification: ' . $notificationError->getMessage());
                 }
                 
                 $this->logActivity('quote_approved', Quote::class, $id, [
-                    'notes' => $validatedData['notes'] ?? null,
-                    'credentials_generated' => !empty($temporaryPassword)
+                    'notes' => $validatedData['notes'] ?? null
                 ]);
                 
-                return $this->updatedResponse($quote->fresh()->load(['customer']), 'Quote approved successfully. Customer will be notified when converted to booking.');
+                return $this->updatedResponse($quote->fresh()->load(['customer']), 'Quote approved successfully. Customer has been notified.');
             }
             
             return $this->errorResponse('Failed to approve quote');
@@ -397,39 +383,23 @@ class QuoteController extends BaseApiController
             $quote = $booking->quote;
             $customer = $quote->customer;
             
-            // Get temporary password from session or generate new one
-            $temporaryPassword = session('quote_' . $quote->id . '_temp_password');
-            if (!$temporaryPassword && (!$customer->password || $customer->password_is_temporary)) {
-                $temporaryPassword = Str::random(12);
-                $customer->password = Hash::make($temporaryPassword);
-                $customer->password_is_temporary = true;
-                $customer->save();
-                
-                Log::info('🔑 TEMPORARY PASSWORD GENERATED (Convert to Booking)', [
-                    'customer_email' => $customer->email,
-                    'temporary_password' => $temporaryPassword,
-                    'quote_reference' => $quote->quote_reference
-                ]);
-            }
-            
-            // Send quote approved email with login credentials NOW (when converting to booking)
-            if ($temporaryPassword) {
+            // Send booking confirmation notification
+            try {
                 $notificationService = app(\App\Services\NotificationService::class);
-                $notificationService->sendQuoteApprovedNotification($quote, $temporaryPassword);
+                $notificationService->sendQuoteConvertedNotification($quote, $booking);
                 
-                // Clear the session password
-                session()->forget('quote_' . $quote->id . '_temp_password');
-                
-                Log::info('📧 Quote Approved Email Sent on Booking Conversion', [
+                Log::info('✅ Quote converted to booking notification sent', [
                     'quote_id' => $quote->id,
                     'booking_id' => $booking->id,
                     'customer_email' => $customer->email
                 ]);
+            } catch (Exception $notificationError) {
+                Log::error('Failed to send booking notification: ' . $notificationError->getMessage());
             }
             
             return $this->createdResponse($booking->load([
                 'customer', 'quote', 'vehicle', 'route'
-            ]), 'Quote converted to booking successfully. Customer has been notified with login credentials.');
+            ]), 'Quote converted to booking successfully. Customer has been notified.');
             
         } catch (ValidationException $e) {
             return $this->validationErrorResponse($e);
@@ -660,17 +630,49 @@ class QuoteController extends BaseApiController
             $firstName = $names[0];
             $lastName = $names[1] ?? '';
 
+            // Generate temporary password for new customers
+            $temporaryPassword = Str::random(12);
+            $isNewCustomer = false;
+
             $customer = Customer::firstOrCreate(
                 ['email' => $request->email],
                 [
                     'first_name' => $firstName,
                     'last_name' => $lastName,
                     'phone' => $request->phone,
-                    'password' => Hash::make(Str::random(16)), 
+                    'password' => Hash::make($temporaryPassword), 
+                    'password_is_temporary' => true,
                     'is_active' => true,
                     'is_verified' => false,
                 ]
             );
+
+            // Check if customer was just created
+            if ($customer->wasRecentlyCreated) {
+                $isNewCustomer = true;
+                Log::info('🆕 New customer created', [
+                    'customer_id' => $customer->id,
+                    'email' => $customer->email,
+                    'temporary_password' => $temporaryPassword
+                ]);
+            } else {
+                // Existing customer - check if they need a password reset
+                if (!$customer->password || $customer->password_is_temporary) {
+                    $customer->password = Hash::make($temporaryPassword);
+                    $customer->password_is_temporary = true;
+                    $customer->save();
+                    $isNewCustomer = true; // Treat as new for credential sending
+                    
+                    Log::info('🔄 Existing customer password reset', [
+                        'customer_id' => $customer->id,
+                        'email' => $customer->email,
+                        'temporary_password' => $temporaryPassword
+                    ]);
+                } else {
+                    // Customer has existing password, don't send credentials
+                    $temporaryPassword = null;
+                }
+            }
 
             // 2. Find Route
             $originMap = [
@@ -718,12 +720,43 @@ class QuoteController extends BaseApiController
             
             $vehicle = Vehicle::create($vehicleData);
 
-            // 4. Calculate Price
-            $shippingCost = $route->base_price;
-            if ($request->shippingMethod === 'container') {
-                $shippingCost += 500;
+            // 4. Generate AI-Powered Quote
+            $aiQuote = null;
+            $aiReasoning = null;
+            $confidenceScore = null;
+            
+            try {
+                Log::info('Requesting AI quote generation');
+                $aiQuote = $this->langGraphService->generateQuote($request->all());
+                
+                if ($aiQuote && isset($aiQuote['success']) && $aiQuote['success']) {
+                    $shippingCost = $aiQuote['adjusted_cost'] ?? $aiQuote['base_cost'];
+                    $aiReasoning = $aiQuote['ai_reasoning'] ?? null;
+                    $confidenceScore = $aiQuote['confidence_score'] ?? null;
+                    
+                    Log::info('AI quote generated successfully', [
+                        'base_cost' => $aiQuote['base_cost'],
+                        'adjusted_cost' => $aiQuote['adjusted_cost'],
+                        'confidence' => $confidenceScore
+                    ]);
+                } else {
+                    throw new Exception('AI service returned unsuccessful response');
+                }
+            } catch (Exception $aiError) {
+                Log::warning('AI quote generation failed, falling back to manual calculation', [
+                    'error' => $aiError->getMessage()
+                ]);
+                
+                // Fallback to manual calculation
+                $shippingCost = $route->base_price;
+                if ($request->shippingMethod === 'container') {
+                    $shippingCost += 500;
+                }
+                $aiReasoning = 'Standard pricing applied (AI service unavailable)';
+                $confidenceScore = 0.5;
             }
             
+            // Calculate additional fees
             $customsDuty = 800;
             $vat = ($shippingCost + $customsDuty) * 0.18;
             $levies = 350;
@@ -739,7 +772,9 @@ class QuoteController extends BaseApiController
                         'model' => $request->model ?? 'Unknown',
                         'year' => $request->year,
                         'engine_size' => $request->engineSize ?? null,
-                        'vehicle_type' => $request->vehicleType
+                        'vehicle_type' => $request->vehicleType,
+                        'ai_reasoning' => $aiReasoning,
+                        'confidence_score' => $confidenceScore
                     ],
                     'route_id' => $route->id,
                     'base_price' => $shippingCost,
@@ -755,11 +790,26 @@ class QuoteController extends BaseApiController
 
                 Log::info("Quote created successfully: ID {$quote->id}, Customer: {$customer->id}, Route: {$route->id}");
 
-                // Send quote created notification
+                // Send quote created notification with login credentials
                 try {
                     $notificationService = app(\App\Services\NotificationService::class);
-                    $notificationService->sendQuoteCreatedNotification($quote);
-                    Log::info("Quote created notification sent for quote ID: {$quote->id}");
+                    
+                    if ($isNewCustomer && $temporaryPassword) {
+                        // Send welcome email with quote details AND login credentials
+                        $notificationService->sendQuoteCreatedWithCredentials($quote, $temporaryPassword);
+                        Log::info("✅ Quote created notification with credentials sent", [
+                            'quote_id' => $quote->id,
+                            'customer_email' => $customer->email,
+                            'has_credentials' => true
+                        ]);
+                    } else {
+                        // Send standard quote notification (customer already has account)
+                        $notificationService->sendQuoteCreatedNotification($quote);
+                        Log::info("✅ Quote created notification sent (existing customer)", [
+                            'quote_id' => $quote->id,
+                            'customer_email' => $customer->email
+                        ]);
+                    }
                 } catch (Exception $notificationError) {
                     Log::error("Failed to send quote created notification: " . $notificationError->getMessage());
                     // Don't fail the quote creation if notification fails
@@ -769,7 +819,17 @@ class QuoteController extends BaseApiController
                     'message' => 'Quote created successfully',
                     'quote_id' => $quote->id,
                     'reference' => $quote->quote_reference ?? 'QT-' . str_pad($quote->id, 5, '0', STR_PAD_LEFT),
-                    'total_estimated' => $total
+                    'total_estimated' => $total,
+                    'ai_powered' => !is_null($aiQuote),
+                    'ai_reasoning' => $aiReasoning,
+                    'confidence_score' => $confidenceScore,
+                    'breakdown' => [
+                        'shipping' => $shippingCost,
+                        'customs_duty' => $customsDuty,
+                        'vat' => $vat,
+                        'levies' => $levies,
+                        'total' => $total
+                    ]
                 ], 201);
             } catch (\Exception $quoteError) {
                 Log::error("Quote Creation Failed after vehicle creation: " . $quoteError->getMessage());

@@ -4,19 +4,16 @@ namespace App\Mail;
 
 use App\Models\Quote;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
-use Illuminate\Mail\Mailables\Content;
-use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class QuoteApprovedMail extends Mailable
+class QuoteCreatedWithCredentialsMail extends Mailable
 {
     use Queueable, SerializesModels;
 
     public $quote;
     public $temporaryPassword;
-    public $customerPortalUrl;
+    public $portalUrl;
 
     /**
      * Create a new message instance.
@@ -25,7 +22,7 @@ class QuoteApprovedMail extends Mailable
     {
         $this->quote = $quote;
         $this->temporaryPassword = $temporaryPassword;
-        $this->customerPortalUrl = env('FRONTEND_URL', config('app.url', 'http://localhost:5173')) . '/customer-portal';
+        $this->portalUrl = config('app.frontend_url', 'http://localhost:5173') . '/customer-portal';
     }
 
     /**
@@ -33,27 +30,19 @@ class QuoteApprovedMail extends Mailable
      */
     public function build()
     {
-        $subject = $this->temporaryPassword 
-            ? 'Your Quote is Approved - Portal Access Included | ShipWithGlowie Auto'
-            : 'Your Quote is Approved - Ready to Accept | ShipWithGlowie Auto';
-        
-        // Use simple template when no password (customer already has access)
-        $view = $this->temporaryPassword 
-            ? 'emails.quote-approved' 
-            : 'emails.quote-approved-simple';
+        $subject = 'Your Quote is Ready - Portal Access Included | ShipWithGlowie Auto';
         
         return $this->subject($subject)
-                    ->view($view)
+                    ->view('emails.quote-created-with-credentials')
                     ->with([
                         'quote' => $this->quote,
                         'customer' => $this->quote->customer,
                         'temporaryPassword' => $this->temporaryPassword,
-                        'portalUrl' => $this->customerPortalUrl,
+                        'portalUrl' => $this->portalUrl,
                         'quoteReference' => $this->quote->quote_reference,
                         'totalAmount' => number_format($this->quote->total_amount, 2),
                         'currency' => $this->quote->currency ?? 'USD',
                         'validUntil' => $this->quote->valid_until ? $this->quote->valid_until->format('M d, Y') : 'N/A',
                     ]);
     }
-}
 }

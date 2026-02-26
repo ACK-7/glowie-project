@@ -603,7 +603,7 @@ const Cars = () => {
                         View Details
                       </Link>
                       <Link
-                        to={`/quote?vehicle=${car.id}`}
+                        to={`/quote?vehicle=${car.slug}`}
                         className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold transition-all duration-300 text-center flex items-center justify-center gap-2"
                       >
                         Get Quote
@@ -704,7 +704,7 @@ const Cars = () => {
                         View Details
                       </Link>
                       <Link
-                        to={`/quote?vehicle=${car.id}`}
+                        to={`/quote?vehicle=${car.slug}`}
                         className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-semibold transition-all duration-300 text-center flex items-center justify-center gap-2"
                       >
                         Get Quote
