@@ -96,7 +96,11 @@ class QuoteService
         DB::beginTransaction();
         
         try {
+            Log::info('Converting quote to booking', ['quote_id' => $quoteId, 'additional_data' => $additionalData]);
+            
             $quote = $this->quoteRepository->findOrFail($quoteId);
+            
+            Log::info('Quote found', ['quote_id' => $quote->id, 'status' => $quote->status, 'customer_id' => $quote->customer_id]);
             
             // Validate conversion is allowed
             if ($quote->status !== Quote::STATUS_APPROVED) {
@@ -110,12 +114,18 @@ class QuoteService
             // Prepare booking data from quote
             $bookingData = $this->prepareBookingDataFromQuote($quote, $additionalData);
             
+            Log::info('Booking data prepared', ['booking_data' => $bookingData]);
+            
             // Create booking using BookingService
             $booking = $this->bookingService->createBooking($bookingData);
+            
+            Log::info('Booking created successfully', ['booking_id' => $booking->id]);
             
             // Update quote status to converted
             $quote->status = Quote::STATUS_CONVERTED;
             $quote->save();
+            
+            Log::info('Quote status updated to converted', ['quote_id' => $quote->id]);
             
             // Generate notifications
             $this->notificationService->sendQuoteConvertedNotification($quote, $booking);
@@ -141,7 +151,10 @@ class QuoteService
             DB::rollBack();
             Log::error('Failed to convert quote to booking', [
                 'quote_id' => $quoteId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
             ]);
             throw $e;
         }
@@ -152,6 +165,8 @@ class QuoteService
      */
     private function prepareBookingDataFromQuote(Quote $quote, array $additionalData): array
     {
+        $customer = $quote->customer;
+        
         $bookingData = [
             'customer_id' => $quote->customer_id,
             'quote_id' => $quote->id,
@@ -159,6 +174,17 @@ class QuoteService
             'total_amount' => $quote->total_amount,
             'currency' => $quote->currency,
             'notes' => $quote->notes,
+            // Add recipient fields with defaults from customer
+            'recipient_name' => $additionalData['recipient_name'] ?? $customer->full_name ?? 'N/A',
+            'recipient_phone' => $additionalData['recipient_phone'] ?? $customer->phone ?? 'N/A',
+            'recipient_email' => $additionalData['recipient_email'] ?? $customer->email ?? 'N/A',
+            'recipient_address' => $additionalData['recipient_address'] ?? $customer->address ?? 'N/A',
+            'recipient_city' => $additionalData['recipient_city'] ?? $customer->city ?? 'N/A',
+            'recipient_country' => $additionalData['recipient_country'] ?? $customer->country ?? 'Uganda',
+            // Add date fields - use provided dates or set to today + 5 days as default
+            'pickup_date' => $additionalData['pickup_date'] ?? now()->addDays(2)->format('Y-m-d'),
+            'delivery_date' => $additionalData['delivery_date'] ?? now()->addDays(10)->format('Y-m-d'),
+            'estimated_delivery' => $additionalData['estimated_delivery'] ?? now()->addDays(10)->format('Y-m-d'),
         ];
         
         // Create vehicle from quote vehicle details if needed
@@ -167,9 +193,8 @@ class QuoteService
             
             // Ensure vehicle_type_id is set (default to 1 if not provided)
             if (!isset($vehicleData['vehicle_type_id'])) {
-                // Try to find a default vehicle type or use ID 1
-                $defaultVehicleType = \App\Models\VehicleType::first();
-                $vehicleData['vehicle_type_id'] = $defaultVehicleType ? $defaultVehicleType->id : 1;
+                // Default to vehicle_type_id = 1 (Sedan/Car)
+                $vehicleData['vehicle_type_id'] = 1;
             }
             
             // Set default values for required fields
@@ -179,7 +204,7 @@ class QuoteService
             $bookingData['vehicle_id'] = $vehicle->id;
         }
         
-        // Merge additional data
+        // Merge additional data (this will override defaults if provided)
         return array_merge($bookingData, $additionalData);
     }
 

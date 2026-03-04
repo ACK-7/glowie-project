@@ -167,7 +167,7 @@ class BookingController extends BaseApiController
                 $bookingData['vehicle_id'] = $vehicle->id;
             } else {
                 // Create a default vehicle if no details available
-                $vehicle = Vehicle::create([
+                    $vehicle = Vehicle::create([
                     'vehicle_type_id' => 1, // Default vehicle type
                     'make' => 'Unknown',
                     'model' => 'Unknown',
@@ -299,7 +299,7 @@ class BookingController extends BaseApiController
     {
         try {
             $booking = $this->bookingRepository->findWithRelations($id, [
-                'customer', 'quote', 'vehicle', 'route', 'shipment', 
+                'customer', 'quote', 'vehicle', 'route', 'shipment',
                 'documents', 'payments', 'createdBy', 'updatedBy'
             ]);
             

@@ -305,10 +305,17 @@ class Quote extends Model
                 ['approved_by' => $this->approved_by, 'notes' => $notes]
             );
             
-            // Broadcast real-time update
-            $realTimeService = app(\App\Services\RealTimeService::class);
-            $approvedBy = $this->approvedBy;
-            $realTimeService->broadcastQuoteStatusUpdate($this, $previousStatus, $approvedBy);
+            // Broadcast real-time update (don't let it fail the approval)
+            try {
+                $realTimeService = app(\App\Services\RealTimeService::class);
+                $approvedBy = $this->approvedBy;
+                $realTimeService->broadcastQuoteStatusUpdate($this, $previousStatus, $approvedBy);
+            } catch (\Exception $e) {
+                \Log::warning('Failed to broadcast quote approval', [
+                    'quote_id' => $this->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
             
             return true;
         }

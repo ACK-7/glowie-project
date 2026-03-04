@@ -278,6 +278,20 @@ class QuoteController extends BaseApiController
                 return $this->notFoundResponse('Quote');
             }
             
+            // If the quote is already approved, treat this as a successful, idempotent call
+            if ($quote->status === Quote::STATUS_APPROVED) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Quote is already approved',
+                    'data' => [
+                        'id' => $quote->id,
+                        'status' => $quote->status,
+                        'approved_at' => $quote->approved_at,
+                        'approved_by' => $quote->approved_by
+                    ]
+                ], 200);
+            }
+            
             if ($quote->status !== Quote::STATUS_PENDING) {
                 return $this->errorResponse('Only pending quotes can be approved', 400);
             }
@@ -285,24 +299,30 @@ class QuoteController extends BaseApiController
             $success = $quote->approve(auth()->id(), $validatedData['notes'] ?? null);
             
             if ($success) {
-                // Send simple approval notification (customer already has portal access)
-                try {
-                    $notificationService = app(\App\Services\NotificationService::class);
-                    $notificationService->sendQuoteApprovedNotification($quote);
-                    
-                    Log::info('✅ Quote approved notification sent', [
-                        'quote_id' => $quote->id,
-                        'customer_email' => $quote->customer->email
-                    ]);
-                } catch (Exception $notificationError) {
-                    Log::error('Failed to send quote approved notification: ' . $notificationError->getMessage());
-                }
-                
                 $this->logActivity('quote_approved', Quote::class, $id, [
                     'notes' => $validatedData['notes'] ?? null
                 ]);
                 
-                return $this->updatedResponse($quote->fresh()->load(['customer']), 'Quote approved successfully. Customer has been notified.');
+                // Send notification in background (don't let it block the response)
+                try {
+                    $notificationService = app(\App\Services\NotificationService::class);
+                    $notificationService->sendQuoteApprovedNotification($quote);
+                } catch (Exception $notificationError) {
+                    Log::error('Failed to send quote approved notification: ' . $notificationError->getMessage());
+                    // Don't fail the request if notification fails
+                }
+                
+                // Return simple success response
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Quote approved successfully',
+                    'data' => [
+                        'id' => $quote->id,
+                        'status' => $quote->status,
+                        'approved_at' => $quote->approved_at,
+                        'approved_by' => $quote->approved_by
+                    ]
+                ], 200);
             }
             
             return $this->errorResponse('Failed to approve quote');
@@ -366,6 +386,8 @@ class QuoteController extends BaseApiController
     public function convertToBooking(Request $request, int $id): JsonResponse
     {
         try {
+            Log::info('=== STARTING CONVERT TO BOOKING ===', ['quote_id' => $id]);
+            
             $validatedData = $this->validateRequest($request, [
                 'pickup_date' => 'nullable|date|after_or_equal:today',
                 'delivery_date' => 'nullable|date|after:pickup_date',
@@ -377,7 +399,11 @@ class QuoteController extends BaseApiController
                 'notes' => 'nullable|string|max:1000'
             ]);
             
+            Log::info('Validation passed', ['validated_data' => $validatedData]);
+            
             $booking = $this->quoteService->convertQuoteToBooking($id, $validatedData);
+            
+            Log::info('Booking conversion successful', ['booking_id' => $booking->id]);
             
             // Get the quote and customer
             $quote = $booking->quote;
@@ -402,8 +428,16 @@ class QuoteController extends BaseApiController
             ]), 'Quote converted to booking successfully. Customer has been notified.');
             
         } catch (ValidationException $e) {
+            Log::error('Validation error during convert to booking', ['errors' => $e->errors()]);
             return $this->validationErrorResponse($e);
         } catch (Exception $e) {
+            Log::error('Convert to booking failed', [
+                'quote_id' => $id,
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'error_trace' => $e->getTraceAsString()
+            ]);
             return $this->handleException($e);
         }
     }

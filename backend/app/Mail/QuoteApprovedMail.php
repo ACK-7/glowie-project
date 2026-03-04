@@ -56,4 +56,3 @@ class QuoteApprovedMail extends Mailable
                     ]);
     }
 }
-}

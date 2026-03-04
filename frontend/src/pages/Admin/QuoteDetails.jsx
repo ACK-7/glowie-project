@@ -74,12 +74,27 @@ const QuoteDetails = () => {
     if (confirmed) {
       try {
         setActionLoading(true);
-        await approveQuote(quote.id, 'Quote approved by admin');
-        await showAlert('Success', 'Quote approved successfully. Customer has been notified.', 'success');
-        fetchQuoteDetails();
+        const response = await approveQuote(quote.id, 'Quote approved by admin');
+
+        // Handle both freshly-approved and already-approved responses gracefully
+        const message =
+          response?.message ||
+          (response?.data?.status === 'approved'
+            ? 'Quote approved successfully. Customer has been notified.'
+            : 'Quote approved successfully.');
+
+        await showAlert('Success', message, 'success');
+        await fetchQuoteDetails();
       } catch (error) {
         console.error('Approve failed:', error);
-        await showAlert('Error', 'Failed to approve quote', 'error');
+
+        const backendMessage = error?.response?.data?.message;
+        if (backendMessage === 'Only pending quotes can be approved') {
+          await showAlert('Info', 'This quote is already approved or no longer pending.', 'info');
+          await fetchQuoteDetails();
+        } else {
+          await showAlert('Error', backendMessage || 'Failed to approve quote', 'error');
+        }
       } finally {
         setActionLoading(false);
       }
