@@ -158,8 +158,15 @@ class ActivityLog extends Model
         array $changes = [],
         int $userId = null
     ): self {
+        // Only log activity for admin users, not customers
+        // ActivityLog user_id references users table, not customers table
+        if ($userId === null) {
+            $user = auth()->user();
+            $userId = ($user && $user instanceof \App\Models\User) ? $user->id : null;
+        }
+        
         return self::create([
-            'user_id' => $userId ?? auth()->id(),
+            'user_id' => $userId,
             'action' => $action,
             'model_type' => $modelType,
             'model_id' => $modelId,

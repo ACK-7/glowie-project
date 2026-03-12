@@ -115,11 +115,8 @@ const DocumentUpload = ({ onUploadSuccess, bookingId = null }) => {
         formData.append('document_type', fileData.documentType);
         formData.append('description', fileData.description || '');
         
-        if (bookingId) {
-          formData.append('booking_id', bookingId);
-        }
-
-        await uploadCustomerDocument(formData);
+        // Pass formData to service which will add customer_id and booking_id
+        await uploadCustomerDocument(formData, bookingId);
         successCount++;
       } catch (error) {
         console.error('Upload failed for file:', fileData.file.name, error);

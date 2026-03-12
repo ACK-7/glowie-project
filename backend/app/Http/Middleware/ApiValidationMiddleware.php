@@ -23,15 +23,20 @@ class ApiValidationMiddleware
     {
         // Validate Content-Type for POST/PUT/PATCH requests
         if (in_array($request->method(), ['POST', 'PUT', 'PATCH'])) {
-            $contentType = $request->header('Content-Type');
-            
-            // Allow application/json and multipart/form-data (for file uploads)
-            if (!str_contains($contentType, 'application/json') && 
-                !str_contains($contentType, 'multipart/form-data')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid Content-Type. Expected application/json or multipart/form-data.',
-                ], 400);
+            // Allow the document AI extract endpoint to bypass strict Content-Type
+            // validation, since it does not require a JSON body and may be called
+            // without an explicit Content-Type header from some clients.
+            if (!$request->is('api/documents/*/extract')) {
+                $contentType = $request->header('Content-Type', '');
+                
+                // Allow application/json and multipart/form-data (for file uploads)
+                if (!str_contains($contentType, 'application/json') && 
+                    !str_contains($contentType, 'multipart/form-data')) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Invalid Content-Type. Expected application/json or multipart/form-data.',
+                    ], 400);
+                }
             }
         }
 

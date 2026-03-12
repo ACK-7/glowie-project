@@ -3,7 +3,7 @@ ShipWithGlowie AI Service - Main Application
 FastAPI server with LangGraph agent orchestration
 """
 
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
@@ -190,7 +190,7 @@ async def optimize_route(
 @app.post("/agents/document", response_model=DocumentResponse)
 async def process_document(
     file: UploadFile = File(...),
-    document_type: str = "bill_of_lading",
+    document_type: str = Form("bill_of_lading"),
     agent: DocumentAgent = Depends(get_document_agent)
 ):
     """
@@ -203,7 +203,7 @@ async def process_document(
     - Flags inconsistencies for human review
     """
     try:
-        logger.info(f"Processing document: {file.filename}")
+        logger.info(f"Processing document: {file.filename}, type: {document_type}")
         result = await agent.execute(file, document_type)
         return result
     except Exception as e:

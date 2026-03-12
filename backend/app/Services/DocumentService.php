@@ -609,8 +609,13 @@ class DocumentService
      */
     private function createAuditTrail(string $action, ?Document $document, array $details): void
     {
+        // Only log activity for admin users, not customers
+        // ActivityLog user_id references users table, not customers table
+        $user = auth()->user();
+        $userId = ($user && $user instanceof \App\Models\User) ? $user->id : null;
+        
         ActivityLog::create([
-            'user_id' => auth()->id(),
+            'user_id' => $userId,
             'action' => $action,
             'model_type' => $document ? Document::class : null,
             'model_id' => $document?->id,

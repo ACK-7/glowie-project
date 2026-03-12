@@ -17,7 +17,8 @@ import {
   FaSort,
   FaSortUp,
   FaSortDown,
-  FaExclamationTriangle
+  FaExclamationTriangle,
+  FaRobot
 } from 'react-icons/fa';
 import { 
   getBookings, 
@@ -270,6 +271,76 @@ const DocumentManager = () => {
     }
   };
 
+  const handleExtractData = async (document) => {
+    try {
+      showAlert.loading('Extracting Data...', 'AI is processing the document...');
+      
+      // Call backend endpoint which will proxy to AI service
+      const response = await fetch(`http://localhost:8000/api/documents/${document.id}/extract`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
+          'Accept': 'application/json',
+          // Ensure Content-Type passes ApiValidationMiddleware check
+          'Content-Type': 'application/json',
+        },
+        // Backend endpoint doesn't require a body, but sending an empty JSON
+        // payload keeps the request consistent with the Content-Type header.
+        body: JSON.stringify({}),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'AI extraction failed');
+      }
+      
+      const result = await response.json();
+      
+      showAlert.close();
+      
+      // Show extracted data in a formatted modal
+      const extractedData = result.data?.extracted_data || result.extracted_data || {};
+      const confidenceScore = result.data?.confidence_score || result.confidence_score || 0;
+      
+      const dataHtml = Object.entries(extractedData)
+        .map(([key, value]) => {
+          const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          return `<div class="flex justify-between py-2 border-b border-gray-200">
+            <span class="font-medium text-gray-700">${formattedKey}:</span>
+            <span class="text-gray-900">${value || 'N/A'}</span>
+          </div>`;
+        })
+        .join('');
+      
+      await showAlert.info(
+        '🤖 AI Extracted Data',
+        `<div class="text-left">
+          <div class="mb-4 p-3 bg-blue-50 rounded-lg">
+            <p class="text-sm text-blue-800">
+              <strong>Confidence Score:</strong> ${(confidenceScore * 100).toFixed(1)}%
+            </p>
+            <div class="mt-2 bg-blue-200 rounded-full h-2">
+              <div class="bg-blue-600 h-2 rounded-full" style="width: ${(confidenceScore * 100)}%"></div>
+            </div>
+          </div>
+          <div class="max-h-96 overflow-auto">
+            ${dataHtml || '<p class="text-gray-500">No data extracted</p>'}
+          </div>
+          <p class="mt-4 text-xs text-gray-500">
+            💡 Tip: Review the extracted data and manually verify important fields
+          </p>
+        </div>`,
+        'info'
+      );
+      
+    } catch (error) {
+      showAlert.close();
+      console.error('Data extraction failed:', error);
+      const errorMessage = error.message || 'Failed to extract data from document';
+      showAlert.error('Extraction Failed', errorMessage);
+    }
+  };
+
   const handleSelectDocument = (documentId) => {
     setSelectedDocuments(prev => 
       prev.includes(documentId) 
@@ -477,6 +548,12 @@ const DocumentManager = () => {
         label: 'Download',
         icon: <FaDownload className="w-4 h-4" />,
         onClick: () => handleDownloadDocument(doc)
+      },
+      {
+        label: 'Extract Data (AI)',
+        icon: <FaRobot className="w-4 h-4 text-purple-400" />,
+        onClick: () => handleExtractData(doc),
+        highlight: true
       }
     ];
 

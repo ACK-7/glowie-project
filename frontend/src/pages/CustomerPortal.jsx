@@ -1212,7 +1212,7 @@ const CustomerPortal = () => {
 
               <DocumentUpload 
                 onUploadSuccess={handleDocumentUploadSuccess}
-                bookingId={selectedBooking?.id}
+                bookingId={selectedBooking?.id || bookings[0]?.id}
               />
             </div>
 

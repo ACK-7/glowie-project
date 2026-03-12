@@ -730,4 +730,74 @@ class DocumentController extends BaseApiController
             return $this->errorResponse($e->getMessage(), 400);
         }
     }
+
+    /**
+     * Extract data from document using AI
+     * 
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function extractData(int $id): JsonResponse
+    {
+        try {
+            $document = $this->documentRepository->find($id);
+            
+            if (!$document) {
+                return $this->notFoundResponse('Document');
+            }
+            
+            // Get the full file path
+            $filePath = storage_path('app/public/' . $document->file_path);
+            
+            if (!file_exists($filePath)) {
+                return $this->errorResponse('Document file not found', 404);
+            }
+            
+            // Send file to AI service
+            $aiServiceUrl = env('AI_SERVICE_URL', 'http://localhost:8001');
+            
+            $client = new \GuzzleHttp\Client();
+            
+            $response = $client->post("{$aiServiceUrl}/agents/document", [
+                'multipart' => [
+                    [
+                        'name' => 'file',
+                        'contents' => fopen($filePath, 'r'),
+                        'filename' => $document->file_name
+                    ],
+                    [
+                        'name' => 'document_type',
+                        'contents' => $document->document_type
+                    ]
+                ],
+                'timeout' => 60,
+                'headers' => [
+                    'Accept' => 'application/json'
+                ]
+            ]);
+            
+            $result = json_decode($response->getBody()->getContents(), true);
+            
+            $this->logActivity('document_data_extracted', \App\Models\Document::class, $id, [
+                'extracted_fields' => count($result['extracted_data'] ?? []),
+                'confidence_score' => $result['confidence_score'] ?? 0
+            ]);
+            
+            return $this->successResponse($result, 'Data extracted successfully');
+            
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            Log::error('AI service request failed', [
+                'error' => $e->getMessage(),
+                'response' => $e->hasResponse() ? $e->getResponse()->getBody()->getContents() : 'No response',
+                'document_id' => $id
+            ]);
+            return $this->errorResponse('AI service unavailable: ' . $e->getMessage(), 503);
+        } catch (Exception $e) {
+            Log::error('Data extraction failed', [
+                'error' => $e->getMessage(),
+                'document_id' => $id
+            ]);
+            return $this->handleException($e);
+        }
+    }
 }

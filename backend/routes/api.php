@@ -100,6 +100,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/documents', [DocumentController::class, 'upload']);
     Route::get('/documents', [DocumentController::class, 'index']);
     Route::get('/documents/{id}', [DocumentController::class, 'show']);
+    Route::post('/documents/{id}/extract', [DocumentController::class, 'extractData']);
     Route::delete('/documents/{id}', [DocumentController::class, 'delete']);
     
     // Tracking

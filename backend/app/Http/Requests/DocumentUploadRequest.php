@@ -20,13 +20,13 @@ class DocumentUploadRequest extends FormRequest
      */
     public function rules(): array
     {
-        $maxSizeMB = Document::MAX_FILE_SIZE / 1048576;
+        $maxSizeKB = Document::MAX_FILE_SIZE / 1024; // Convert bytes to KB for Laravel validation
         
         return [
             'file' => [
                 'required',
                 'file',
-                "max:{$maxSizeMB}",
+                "max:{$maxSizeKB}",
                 'mimes:pdf,jpeg,jpg,png,gif,webp',
             ],
             'booking_id' => 'required|exists:bookings,id',

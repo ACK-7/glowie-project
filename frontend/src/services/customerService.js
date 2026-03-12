@@ -95,14 +95,65 @@ export const getCustomerDocuments = async () => {
   }
 };
 
-export const uploadCustomerDocument = async (formData) => {
-  const response = await axios.post(`${API_BASE_URL}/documents`, formData, {
-    headers: {
-      ...getCustomerAuthHeaders(),
-      'Content-Type': 'multipart/form-data'
+export const uploadCustomerDocument = async (formData, bookingId = null) => {
+  try {
+    // Get customer ID from profile
+    const profile = await getCustomerProfile();
+    const customerId = profile.data?.id || profile.id;
+    
+    if (!customerId) {
+      throw new Error('Customer ID not found. Please log in again.');
     }
-  });
-  return response.data;
+    
+    // Add customer_id to formData
+    formData.append('customer_id', customerId);
+    
+    // Add booking_id if provided
+    if (bookingId) {
+      formData.append('booking_id', bookingId);
+    } else {
+      // If no booking_id, fetch bookings to get the most recent one
+      const bookingsResponse = await axios.get(`${API_BASE_URL}/bookings`, {
+        headers: getCustomerAuthHeaders()
+      });
+      
+      // Extract bookings array - handle different response structures
+      let bookingsData = [];
+      if (Array.isArray(bookingsResponse.data)) {
+        bookingsData = bookingsResponse.data;
+      } else if (bookingsResponse.data?.data && Array.isArray(bookingsResponse.data.data)) {
+        bookingsData = bookingsResponse.data.data;
+      } else if (bookingsResponse.data?.bookings && Array.isArray(bookingsResponse.data.bookings)) {
+        bookingsData = bookingsResponse.data.bookings;
+      }
+      
+      if (!Array.isArray(bookingsData) || bookingsData.length === 0) {
+        throw new Error('No bookings found. Please create a booking first before uploading documents.');
+      }
+      
+      // Use the most recent booking
+      const sortedBookings = [...bookingsData].sort((a, b) => 
+        new Date(b.created_at) - new Date(a.created_at)
+      );
+      
+      formData.append('booking_id', sortedBookings[0].id);
+    }
+    
+    const response = await axios.post(`${API_BASE_URL}/documents`, formData, {
+      headers: {
+        ...getCustomerAuthHeaders(),
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    
+    return response.data;
+  } catch (error) {
+    // Re-throw with better error message
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    }
+    throw error;
+  }
 };
 
 export const downloadCustomerDocument = async (documentId) => {
