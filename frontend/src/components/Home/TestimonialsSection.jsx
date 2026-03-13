@@ -109,7 +109,7 @@ const TestimonialsSection = () => {
         {/* Stats Section */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
           {stats.map((stat, index) => (
-            <div key={index} className="bg-white rounded-2xl p-6 text-center shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <div key={index} className="bg-white rounded-2xl p-6 text-center shadow-sm hover:shadow-md transition-shadow duration-300">
               <div className={`w-16 h-16 ${stat.color.replace('text-', 'bg-').replace('-500', '-100')} rounded-2xl flex items-center justify-center mx-auto mb-4`}>
                 <stat.icon className={`text-2xl ${stat.color}`} />
               </div>
@@ -124,7 +124,7 @@ const TestimonialsSection = () => {
         </div>
 
         {/* Featured Testimonial */}
-        <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 mb-12 border border-gray-100">
+        <div className="bg-white rounded-3xl shadow-md p-8 md:p-12 mb-12 border border-gray-100">
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div>
               <div className="flex items-center gap-4 mb-6">
@@ -188,40 +188,6 @@ const TestimonialsSection = () => {
                   : 'bg-gray-300 hover:bg-gray-400'
               }`}
             />
-          ))}
-        </div>
-
-        {/* All Testimonials Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {testimonials.slice(0, 3).map((testimonial, index) => (
-            <div key={index} className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-              <div className="flex items-center gap-3 mb-4">
-                <div className={`w-12 h-12 ${testimonial.color} rounded-full flex items-center justify-center text-white font-bold`}>
-                  {testimonial.avatar}
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900">{testimonial.name}</h4>
-                  <p className="text-sm text-gray-600">{testimonial.location}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1 mb-3">
-                {[...Array(testimonial.rating)].map((_, i) => (
-                  <FaStar key={i} className="text-yellow-400 text-sm" />
-                ))}
-              </div>
-
-              <p className="text-gray-600 text-sm leading-relaxed mb-4">
-                {testimonial.text.substring(0, 120)}...
-              </p>
-
-              <div className="pt-3 border-t border-gray-100">
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>{testimonial.vehicle}</span>
-                  <span>{testimonial.deliveryTime}</span>
-                </div>
-              </div>
-            </div>
           ))}
         </div>
       </div>

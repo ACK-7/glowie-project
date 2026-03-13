@@ -26,25 +26,25 @@ const Footer = () => {
                 href="#" 
                 className="w-10 h-10 bg-white/10 hover:bg-gradient-primary rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
               >
-                📘
+                <FaFacebookF className="text-sm" />
               </a>
               <a 
                 href="#" 
                 className="w-10 h-10 bg-white/10 hover:bg-gradient-primary rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
               >
-                📷
+                <FaInstagram className="text-sm" />
               </a>
               <a 
                 href="#" 
                 className="w-10 h-10 bg-white/10 hover:bg-gradient-primary rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
               >
-                🐦
+                <FaTwitter className="text-sm" />
               </a>
               <a 
                 href="#" 
                 className="w-10 h-10 bg-white/10 hover:bg-gradient-primary rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
               >
-                💼
+                <FaLinkedinIn className="text-sm" />
               </a>
             </div>
           </div>
@@ -81,11 +81,11 @@ const Footer = () => {
             <h4 className="text-lg font-heading font-semibold mb-4 text-gold-400">Contact Us</h4>
             <ul className="space-y-3 text-gray-400">
               <li className="flex items-start gap-2">
-                <span>📍</span>
+                <FaMapMarkerAlt className="text-sm mt-1" />
                 <span>Kampala, Uganda</span>
               </li>
               <li className="flex items-start gap-2">
-                <span>✉️</span>
+                <FaEnvelope className="text-sm mt-1" />
                 <a href="mailto:support@shipwithglowie.com" className="hover:text-white transition">
                   support@shipwithglowie.com
                 </a>

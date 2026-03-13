@@ -119,7 +119,7 @@ const ExploreVehicles = () => {
 
   if (loading) {
     return (
-      <section className="section-padding bg-gradient-to-b from-gray-50 to-white">
+      <section className="section-padding bg-gray-50">
         <div className="container-custom">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -132,7 +132,7 @@ const ExploreVehicles = () => {
 
   if (error) {
     return (
-      <section className="section-padding bg-gradient-to-b from-gray-50 to-white">
+      <section className="section-padding bg-gray-50">
         <div className="container-custom">
           <div className="text-center">
             <p className="text-red-600">Error loading vehicles: {error}</p>
@@ -149,11 +149,11 @@ const ExploreVehicles = () => {
   }
 
   return (
-    <section className="section-padding bg-gradient-to-b from-gray-50 to-white">
+    <section className="section-padding bg-gray-50">
       <div className="container-custom">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold mb-4">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold my-6">
             <FaCar className="text-blue-600" />
             EXPLORE OUR INVENTORY
           </div>
@@ -289,7 +289,7 @@ const ExploreVehicles = () => {
                       View Details
                     </Link>
                     <Link
-                      to={`/quote?vehicle=${vehicle.id}`}
+                      to={`/quote?vehicle=${vehicle.slug}`}
                       className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold transition-all duration-300 text-center flex items-center justify-center gap-2"
                     >
                       Get Quote

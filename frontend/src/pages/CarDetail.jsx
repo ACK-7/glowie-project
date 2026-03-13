@@ -548,7 +548,7 @@ const CarDetail = () => {
               {/* Action Buttons */}
               <div className="space-y-3">
                 <Link
-                  to={`/quote?vehicle=${car.id}`}
+                  to={`/quote?vehicle=${car.slug}`}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-semibold transition-all duration-300 text-center block"
                 >
                   Get Quote & Shipping Info

@@ -1,46 +1,51 @@
-import axios from 'axios';
+import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
 // Get customer auth token from localStorage
 const getCustomerAuthHeaders = () => {
-  const token = localStorage.getItem('customer_token');
+  const token = localStorage.getItem("customer_token");
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
 // Customer Profile API
 export const getCustomerProfile = async () => {
   const response = await axios.get(`${API_BASE_URL}/customer/profile`, {
-    headers: getCustomerAuthHeaders()
+    headers: getCustomerAuthHeaders(),
   });
   return response.data;
 };
 
 export const updateCustomerProfile = async (data) => {
   const response = await axios.put(`${API_BASE_URL}/customer/profile`, data, {
-    headers: getCustomerAuthHeaders()
+    headers: getCustomerAuthHeaders(),
   });
   return response.data;
 };
 
 export const changeCustomerPassword = async (data) => {
-  const response = await axios.post(`${API_BASE_URL}/customer/change-password`, data, {
-    headers: getCustomerAuthHeaders()
-  });
+  const response = await axios.post(
+    `${API_BASE_URL}/customer/change-password`,
+    data,
+    {
+      headers: getCustomerAuthHeaders(),
+    },
+  );
   return response.data;
 };
 
 // Customer Quotes API
 export const getCustomerQuotes = async () => {
   const response = await axios.get(`${API_BASE_URL}/quotes`, {
-    headers: getCustomerAuthHeaders()
+    headers: getCustomerAuthHeaders(),
   });
   return response.data;
 };
 
 export const getCustomerQuote = async (id) => {
   const response = await axios.get(`${API_BASE_URL}/quotes/${id}`, {
-    headers: getCustomerAuthHeaders()
+    headers: getCustomerAuthHeaders(),
   });
   return response.data;
 };
@@ -48,25 +53,29 @@ export const getCustomerQuote = async (id) => {
 // Customer Bookings API
 export const getCustomerBookings = async () => {
   const response = await axios.get(`${API_BASE_URL}/bookings`, {
-    headers: getCustomerAuthHeaders()
+    headers: getCustomerAuthHeaders(),
   });
   return response.data;
 };
 
 export const getCustomerBooking = async (id) => {
   const response = await axios.get(`${API_BASE_URL}/bookings/${id}`, {
-    headers: getCustomerAuthHeaders()
+    headers: getCustomerAuthHeaders(),
   });
   return response.data;
 };
 
 export const confirmQuoteToBooking = async (quoteId, additionalData = {}) => {
-  const response = await axios.post(`${API_BASE_URL}/bookings`, {
-    quote_id: quoteId,
-    ...additionalData
-  }, {
-    headers: getCustomerAuthHeaders()
-  });
+  const response = await axios.post(
+    `${API_BASE_URL}/bookings`,
+    {
+      quote_id: quoteId,
+      ...additionalData,
+    },
+    {
+      headers: getCustomerAuthHeaders(),
+    },
+  );
   return response.data;
 };
 
@@ -76,21 +85,24 @@ export const getCustomerDocuments = async () => {
     // First try to get customer ID from profile
     const profile = await getCustomerProfile();
     const customerId = profile.data?.id || profile.id;
-    
+
     if (customerId) {
-      const response = await axios.get(`${API_BASE_URL}/admin/crud/documents/customer/${customerId}`, {
-        headers: getCustomerAuthHeaders()
-      });
+      const response = await axios.get(
+        `${API_BASE_URL}/admin/crud/documents/customer/${customerId}`,
+        {
+          headers: getCustomerAuthHeaders(),
+        },
+      );
       return response.data;
     }
-    
+
     // Fallback to general documents endpoint
     const response = await axios.get(`${API_BASE_URL}/documents`, {
-      headers: getCustomerAuthHeaders()
+      headers: getCustomerAuthHeaders(),
     });
     return response.data;
   } catch (error) {
-    console.error('Error fetching customer documents:', error);
+    console.error("Error fetching customer documents:", error);
     throw error;
   }
 };
@@ -100,52 +112,60 @@ export const uploadCustomerDocument = async (formData, bookingId = null) => {
     // Get customer ID from profile
     const profile = await getCustomerProfile();
     const customerId = profile.data?.id || profile.id;
-    
+
     if (!customerId) {
-      throw new Error('Customer ID not found. Please log in again.');
+      throw new Error("Customer ID not found. Please log in again.");
     }
-    
+
     // Add customer_id to formData
-    formData.append('customer_id', customerId);
-    
+    formData.append("customer_id", customerId);
+
     // Add booking_id if provided
     if (bookingId) {
-      formData.append('booking_id', bookingId);
+      formData.append("booking_id", bookingId);
     } else {
       // If no booking_id, fetch bookings to get the most recent one
       const bookingsResponse = await axios.get(`${API_BASE_URL}/bookings`, {
-        headers: getCustomerAuthHeaders()
+        headers: getCustomerAuthHeaders(),
       });
-      
+
       // Extract bookings array - handle different response structures
       let bookingsData = [];
       if (Array.isArray(bookingsResponse.data)) {
         bookingsData = bookingsResponse.data;
-      } else if (bookingsResponse.data?.data && Array.isArray(bookingsResponse.data.data)) {
+      } else if (
+        bookingsResponse.data?.data &&
+        Array.isArray(bookingsResponse.data.data)
+      ) {
         bookingsData = bookingsResponse.data.data;
-      } else if (bookingsResponse.data?.bookings && Array.isArray(bookingsResponse.data.bookings)) {
+      } else if (
+        bookingsResponse.data?.bookings &&
+        Array.isArray(bookingsResponse.data.bookings)
+      ) {
         bookingsData = bookingsResponse.data.bookings;
       }
-      
+
       if (!Array.isArray(bookingsData) || bookingsData.length === 0) {
-        throw new Error('No bookings found. Please create a booking first before uploading documents.');
+        throw new Error(
+          "No bookings found. Please create a booking first before uploading documents.",
+        );
       }
-      
+
       // Use the most recent booking
-      const sortedBookings = [...bookingsData].sort((a, b) => 
-        new Date(b.created_at) - new Date(a.created_at)
+      const sortedBookings = [...bookingsData].sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at),
       );
-      
-      formData.append('booking_id', sortedBookings[0].id);
+
+      formData.append("booking_id", sortedBookings[0].id);
     }
-    
+
     const response = await axios.post(`${API_BASE_URL}/documents`, formData, {
       headers: {
         ...getCustomerAuthHeaders(),
-        'Content-Type': 'multipart/form-data'
-      }
+        "Content-Type": "multipart/form-data",
+      },
     });
-    
+
     return response.data;
   } catch (error) {
     // Re-throw with better error message
@@ -157,32 +177,35 @@ export const uploadCustomerDocument = async (formData, bookingId = null) => {
 };
 
 export const downloadCustomerDocument = async (documentId) => {
-  const response = await axios.get(`${API_BASE_URL}/admin/crud/documents/${documentId}/download`, {
-    headers: getCustomerAuthHeaders(),
-    responseType: 'blob'
-  });
-  
+  const response = await axios.get(
+    `${API_BASE_URL}/admin/crud/documents/${documentId}/download`,
+    {
+      headers: getCustomerAuthHeaders(),
+      responseType: "blob",
+    },
+  );
+
   // Create download link
   const url = window.URL.createObjectURL(new Blob([response.data]));
-  const link = document.createElement('a');
+  const link = document.createElement("a");
   link.href = url;
-  
+
   // Try to get filename from response headers
-  const contentDisposition = response.headers['content-disposition'];
-  let filename = 'document';
+  const contentDisposition = response.headers["content-disposition"];
+  let filename = "document";
   if (contentDisposition) {
     const filenameMatch = contentDisposition.match(/filename="(.+)"/);
     if (filenameMatch) {
       filename = filenameMatch[1];
     }
   }
-  
-  link.setAttribute('download', filename);
+
+  link.setAttribute("download", filename);
   document.body.appendChild(link);
   link.click();
   link.remove();
   window.URL.revokeObjectURL(url);
-  
+
   return response.data;
 };
 
@@ -192,17 +215,20 @@ export const getCustomerPayments = async () => {
     // First try to get customer ID from profile
     const profile = await getCustomerProfile();
     const customerId = profile.data?.id || profile.id;
-    
+
     if (customerId) {
-      const response = await axios.get(`${API_BASE_URL}/admin/crud/payments/customer/${customerId}`, {
-        headers: getCustomerAuthHeaders()
-      });
+      const response = await axios.get(
+        `${API_BASE_URL}/admin/crud/payments/customer/${customerId}`,
+        {
+          headers: getCustomerAuthHeaders(),
+        },
+      );
       return response.data;
     }
-    
+
     return { data: [] };
   } catch (error) {
-    console.error('Error fetching customer payments:', error);
+    console.error("Error fetching customer payments:", error);
     return { data: [] };
   }
 };
@@ -212,37 +238,43 @@ export const getCustomerShipments = async () => {
   try {
     const bookings = await getCustomerBookings();
     const bookingsData = bookings.data || bookings || [];
-    
+
     // Get shipment details for each booking
     const shipmentsPromises = bookingsData.map(async (booking) => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/tracking/${booking.id}`, {
-          headers: getCustomerAuthHeaders()
-        });
+        const response = await axios.get(
+          `${API_BASE_URL}/tracking/${booking.id}`,
+          {
+            headers: getCustomerAuthHeaders(),
+          },
+        );
         return {
           ...booking,
-          shipment: response.data.data || response.data
+          shipment: response.data.data || response.data,
         };
       } catch (error) {
         return {
           ...booking,
-          shipment: null
+          shipment: null,
         };
       }
     });
-    
+
     const shipments = await Promise.all(shipmentsPromises);
     return { data: shipments };
   } catch (error) {
-    console.error('Error fetching customer shipments:', error);
+    console.error("Error fetching customer shipments:", error);
     return { data: [] };
   }
 };
 
 export const trackShipment = async (trackingNumber) => {
-  const response = await axios.get(`${API_BASE_URL}/tracking/${trackingNumber}`, {
-    headers: getCustomerAuthHeaders()
-  });
+  const response = await axios.get(
+    `${API_BASE_URL}/tracking/${trackingNumber}`,
+    {
+      headers: getCustomerAuthHeaders(),
+    },
+  );
   return response.data;
 };
 
@@ -253,52 +285,59 @@ export const getCustomerDashboardStats = async () => {
       getCustomerQuotes().catch(() => ({ data: [] })),
       getCustomerBookings().catch(() => ({ data: [] })),
       getCustomerDocuments().catch(() => ({ data: [] })),
-      getCustomerPayments().catch(() => ({ data: [] }))
+      getCustomerPayments().catch(() => ({ data: [] })),
     ]);
-    
+
     const quotesData = quotes.data || quotes || [];
     const bookingsData = bookings.data || bookings || [];
     const documentsData = documents.data || documents || [];
     const paymentsData = payments.data || payments || [];
-    
+
     // Calculate stats
-    const activeShipments = bookingsData.filter(booking => 
-      ['confirmed', 'in_transit', 'processing'].includes(booking.status)
+    const activeShipments = bookingsData.filter((booking) =>
+      ["confirmed", "in_transit", "processing"].includes(booking.status),
     ).length;
-    
-    const pendingPayments = paymentsData.filter(payment => 
-      payment.status === 'pending' || payment.status === 'partial'
+
+    const pendingPayments = paymentsData.filter(
+      (payment) => payment.status === "pending" || payment.status === "partial",
     );
-    
+
     const totalBalance = pendingPayments.reduce((sum, payment) => {
-      return sum + (parseFloat(payment.amount || 0) - parseFloat(payment.paid_amount || 0));
+      return (
+        sum +
+        (parseFloat(payment.amount || 0) - parseFloat(payment.paid_amount || 0))
+      );
     }, 0);
-    
-    const pendingDocuments = documentsData.filter(doc => 
-      doc.status === 'pending' || doc.status === 'requires_revision'
+
+    const pendingDocuments = documentsData.filter(
+      (doc) => doc.status === "pending" || doc.status === "requires_revision",
     ).length;
-    
-    const approvedQuotes = quotesData.filter(quote => quote.status === 'approved').length;
-    
+
+    const approvedQuotes = quotesData.filter(
+      (quote) => quote.status === "approved",
+    ).length;
+
     return {
       data: {
         totalQuotes: quotesData.length,
         approvedQuotes,
-        pendingQuotes: quotesData.filter(q => q.status === 'pending').length,
+        pendingQuotes: quotesData.filter((q) => q.status === "pending").length,
         totalBookings: bookingsData.length,
         activeShipments,
-        completedShipments: bookingsData.filter(b => b.status === 'delivered').length,
+        completedShipments: bookingsData.filter((b) => b.status === "delivered")
+          .length,
         totalDocuments: documentsData.length,
         pendingDocuments,
-        approvedDocuments: documentsData.filter(d => d.status === 'approved').length,
+        approvedDocuments: documentsData.filter((d) => d.status === "approved")
+          .length,
         totalPayments: paymentsData.length,
         pendingPayments: pendingPayments.length,
         totalBalance: totalBalance.toFixed(2),
-        contractStatus: bookingsData.length > 0 ? 'Active' : 'None'
-      }
+        contractStatus: bookingsData.length > 0 ? "Active" : "None",
+      },
     };
   } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
+    console.error("Error fetching dashboard stats:", error);
     return {
       data: {
         totalQuotes: 0,
@@ -312,44 +351,59 @@ export const getCustomerDashboardStats = async () => {
         approvedDocuments: 0,
         totalPayments: 0,
         pendingPayments: 0,
-        totalBalance: '0.00',
-        contractStatus: 'None'
-      }
+        totalBalance: "0.00",
+        contractStatus: "None",
+      },
     };
   }
 };
 
+// Customer Reviews API
+export const submitReview = async (data) => {
+  const response = await axios.post(`${API_BASE_URL}/customer/reviews`, data, {
+    headers: getCustomerAuthHeaders(),
+  });
+  return response.data;
+};
+
+export const getCustomerReviews = async () => {
+  const response = await axios.get(`${API_BASE_URL}/customer/reviews`, {
+    headers: getCustomerAuthHeaders(),
+  });
+  return response.data;
+};
+
 // Utility function to format currency
 export const formatCurrency = (amount) => {
-  if (!amount || amount === 0) return '0.00';
-  return Number(amount).toLocaleString('en-US', {
+  if (!amount || amount === 0) return "0.00";
+  return Number(amount).toLocaleString("en-US", {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2
+    maximumFractionDigits: 2,
   });
 };
 
 // Utility function to format date
 export const formatDate = (dateString) => {
-  if (!dateString) return 'N/A';
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
+  if (!dateString) return "N/A";
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   });
 };
 
 // Utility function to get status badge color
 export const getStatusColor = (status) => {
   const colors = {
-    pending: 'bg-yellow-100 text-yellow-800',
-    approved: 'bg-green-100 text-green-800',
-    rejected: 'bg-red-100 text-red-800',
-    confirmed: 'bg-blue-100 text-blue-800',
-    in_transit: 'bg-purple-100 text-purple-800',
-    delivered: 'bg-green-100 text-green-800',
-    processing: 'bg-orange-100 text-orange-800',
-    paid: 'bg-green-100 text-green-800',
-    partial: 'bg-yellow-100 text-yellow-800'
+    pending: "bg-yellow-100 text-yellow-800",
+    approved: "bg-green-100 text-green-800",
+    rejected: "bg-red-100 text-red-800",
+    confirmed: "bg-blue-100 text-blue-800",
+    in_transit: "bg-purple-100 text-purple-800",
+    delivered: "bg-green-100 text-green-800",
+    processing: "bg-orange-100 text-orange-800",
+    paid: "bg-green-100 text-green-800",
+    partial: "bg-yellow-100 text-yellow-800",
   };
-  return colors[status] || 'bg-gray-100 text-gray-800';
+  return colors[status] || "bg-gray-100 text-gray-800";
 };

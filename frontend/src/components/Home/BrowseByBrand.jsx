@@ -144,7 +144,7 @@ const BrowseByBrand = () => {
 
   if (loading) {
     return (
-      <section className="section-padding bg-gradient-to-b from-gray-50 to-white">
+      <section className="section-padding bg-white">
         <div className="container-custom">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -157,7 +157,7 @@ const BrowseByBrand = () => {
 
   if (error) {
     return (
-      <section className="section-padding bg-gradient-to-b from-gray-50 to-white">
+      <section className="section-padding bg-white">
         <div className="container-custom">
           <div className="text-center">
             <p className="text-red-600">Error loading data: {error}</p>
@@ -174,11 +174,11 @@ const BrowseByBrand = () => {
   }
 
   return (
-    <section className="section-padding bg-gradient-to-b from-gray-50 to-white">
+    <section className="section-padding bg-white">
       <div className="container-custom">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold mb-4">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold my-6">
             <FaShip className="text-blue-600" />
             FIND YOUR PERFECT VEHICLE
           </div>

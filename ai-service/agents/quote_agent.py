@@ -127,14 +127,18 @@ class QuoteAgent:
         # Get base rate
         base_cost = base_rates.get(origin, {}).get(method, 1500)
         
-        # Vehicle type multiplier
+        # Vehicle type multiplier (includes all supported types)
         vehicle_multipliers = {
             "sedan": 1.0,
             "suv": 1.2,
             "truck": 1.3,
             "van": 1.25,
             "luxury": 1.5,
-            "motorcycle": 0.7
+            "motorcycle": 0.7,
+            "hatchback": 0.95,
+            "wagon": 1.05,
+            "coupe": 1.0,
+            "convertible": 1.1,
         }
         
         multiplier = vehicle_multipliers.get(state["vehicle_type"].lower(), 1.0)
@@ -216,11 +220,14 @@ class QuoteAgent:
             }
     
     def _generate_breakdown(self, state: QuoteState) -> dict:
-        """Generate cost breakdown"""
+        """Generate cost breakdown with AI-estimated customs duty"""
         logger.info("Generating cost breakdown")
-        
+
         shipping_cost = state['adjusted_cost']
-        customs_duty = 800  # Estimated
+
+        # AI-powered customs duty estimation based on Uganda's import duty bands
+        customs_duty = self._estimate_customs_duty(state)
+
         vat = (shipping_cost + customs_duty) * 0.18  # 18% VAT
         levies = 350  # Fixed levies
         
@@ -250,6 +257,49 @@ class QuoteAgent:
             "estimated_delivery_days": estimated_days,
             "messages": [f"Total cost: ${total_cost:.2f}"]
         }
+
+    def _estimate_customs_duty(self, state: QuoteState) -> float:
+        """Estimate Uganda customs duty using AI reasoning over import bands"""
+        prompt = f"""
+        You are a Uganda Revenue Authority (URA) customs duty expert.
+        Estimate the import customs duty for the following vehicle being imported to Uganda.
+
+        Vehicle Details:
+        - Year: {state.get('year', 'unknown')}
+        - Make: {state.get('make', 'unknown')}
+        - Model: {state.get('model', 'unknown')}
+        - Type: {state.get('vehicle_type', 'sedan')}
+        - Engine Size: {state.get('engine_size') or 'unknown'} cc
+        - Origin: {state.get('origin_country', 'japan')}
+
+        Uganda import duty rules (approximate):
+        - Vehicles over 8 years old: additional 15% surcharge
+        - Engine < 1500cc: duty band ~$600-$800
+        - Engine 1500-2500cc: duty band ~$800-$1400
+        - Engine 2500-4000cc: duty band ~$1400-$2200
+        - Engine > 4000cc or luxury: duty band ~$2200-$3500
+        - Motorcycles: duty band ~$300-$600
+
+        Respond with ONLY a single number (the estimated customs duty in USD, no symbol, no text).
+        Example: 1200
+        """
+        try:
+            response = self.llm.invoke(prompt)
+            duty = float(response.content.strip().replace('$', '').replace(',', '').split()[0])
+            # Sanity check: clamp between $300 and $5000
+            return max(300.0, min(5000.0, duty))
+        except Exception as e:
+            logger.warning(f"AI customs duty estimation failed, using default: {str(e)}")
+            # Fallback: engine-size based bands
+            engine = state.get('engine_size') or 0
+            if engine < 1500:
+                return 700.0
+            elif engine < 2500:
+                return 1100.0
+            elif engine < 4000:
+                return 1800.0
+            else:
+                return 2500.0
     
     def _save_quote(self, state: QuoteState) -> dict:
         """Save quote to database"""

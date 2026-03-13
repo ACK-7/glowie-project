@@ -1,24 +1,56 @@
-import { useState, useRef, useEffect } from 'react';
-import { FaRobot, FaTimes, FaPaperPlane, FaSpinner } from 'react-icons/fa';
-import axios from 'axios';
+import { useState, useRef, useEffect } from "react";
+import { FaRobot, FaTimes, FaPaperPlane, FaSpinner } from "react-icons/fa";
+import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+
+const STORAGE_KEY = "glowie_chat_history";
+const SESSION_TTL = 60 * 60 * 1000; // 1 hour
+
+const loadChatHistory = () => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return null;
+    const { messages, savedAt } = JSON.parse(saved);
+    if (Date.now() - savedAt > SESSION_TTL) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return messages.map((m) => ({ ...m, timestamp: new Date(m.timestamp) }));
+  } catch {
+    return null;
+  }
+};
+
+const saveChatHistory = (messages) => {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ messages, savedAt: Date.now() }),
+    );
+  } catch {}
+};
 
 const AIChatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([
-    {
-      type: 'ai',
-      text: 'Hello! 👋 I\'m your AI shipping assistant. How can I help you today?',
-      timestamp: new Date()
-    }
-  ]);
-  const [inputMessage, setInputMessage] = useState('');
+  const [messages, setMessages] = useState(() => {
+    return (
+      loadChatHistory() || [
+        {
+          type: "ai",
+          text: "Hello! 👋 I'm your AI shipping assistant. How can I help you today?",
+          timestamp: new Date(),
+        },
+      ]
+    );
+  });
+  const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -30,48 +62,52 @@ const AIChatbot = () => {
     if (!inputMessage.trim() || isLoading) return;
 
     const userMessage = inputMessage.trim();
-    setInputMessage('');
+    setInputMessage("");
 
     // Add user message
-    setMessages(prev => [...prev, {
-      type: 'user',
-      text: userMessage,
-      timestamp: new Date()
-    }]);
+    setMessages((prev) => {
+      const updated = [...prev, { type: "user", text: userMessage, timestamp: new Date() }];
+      saveChatHistory(updated);
+      return updated;
+    });
 
     setIsLoading(true);
 
     try {
       const response = await axios.post(`${API_BASE_URL}/chatbot`, {
         query: userMessage,
-        context: 'marketing_website'
+        context: "marketing_website",
       });
 
       // Add AI response
-      const aiResponse = response.data.data?.response || response.data.response || response.data.message || 'I apologize, but I couldn\'t generate a response.';
-      
-      setMessages(prev => [...prev, {
-        type: 'ai',
-        text: aiResponse,
-        timestamp: new Date()
-      }]);
+      const aiResponse =
+        response.data.data?.response ||
+        response.data.response ||
+        response.data.message ||
+        "I apologize, but I couldn't generate a response.";
+
+      setMessages((prev) => {
+        const updated = [...prev, { type: "ai", text: aiResponse, timestamp: new Date() }];
+        saveChatHistory(updated);
+        return updated;
+      });
     } catch (error) {
-      console.error('Chatbot error:', error);
-      setMessages(prev => [...prev, {
-        type: 'ai',
-        text: 'I apologize, but I\'m having trouble connecting right now. Please try again or contact us directly.',
-        timestamp: new Date()
-      }]);
+      console.error("Chatbot error:", error);
+      setMessages((prev) => {
+        const updated = [...prev, { type: "ai", text: "I apologize, but I'm having trouble connecting right now. Please try again or contact us directly.", timestamp: new Date() }];
+        saveChatHistory(updated);
+        return updated;
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   const quickQuestions = [
-    'How much does shipping cost?',
-    'How long does shipping take?',
-    'What documents do I need?',
-    'Can I track my shipment?'
+    "How much does shipping cost?",
+    "How long does shipping take?",
+    "What documents do I need?",
+    "Can I track my shipment?",
   ];
 
   const handleQuickQuestion = (question) => {
@@ -122,20 +158,29 @@ const AIChatbot = () => {
             {messages.map((message, index) => (
               <div
                 key={index}
-                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
                   className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                    message.type === 'user'
-                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
-                      : 'bg-white text-gray-800 shadow-sm border border-gray-200'
+                    message.type === "user"
+                      ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+                      : "bg-white text-gray-800 shadow-sm border border-gray-200"
                   }`}
                 >
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
-                  <p className={`text-xs mt-1 ${
-                    message.type === 'user' ? 'text-white/70' : 'text-gray-500'
-                  }`}>
-                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                    {message.text}
+                  </p>
+                  <p
+                    className={`text-xs mt-1 ${
+                      message.type === "user"
+                        ? "text-white/70"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    {message.timestamp.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </p>
                 </div>
               </div>
@@ -171,7 +216,10 @@ const AIChatbot = () => {
           )}
 
           {/* Input */}
-          <form onSubmit={handleSendMessage} className="p-4 bg-white border-t border-gray-200">
+          <form
+            onSubmit={handleSendMessage}
+            className="p-4 bg-white border-t border-gray-200"
+          >
             <div className="flex gap-2">
               <input
                 type="text"

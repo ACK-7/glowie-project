@@ -10,7 +10,7 @@ const PublicLayout = () => {
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
-      <main className={`flex-grow ${isHomePage ? '' : 'pt-32'}`}>
+      <main className={`flex-grow ${isHomePage ? '' : 'pt-24'}`}>
         <Outlet />
       </main>
       <Footer />

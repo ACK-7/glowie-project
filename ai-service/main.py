@@ -63,7 +63,17 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:8000"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+        "http://localhost:5176",
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:8000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -284,7 +294,187 @@ async def send_notification(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Error handler
+
+# Vehicle Description Parser (Natural Language → Form Fields)
+@app.post("/agents/parse-description")
+async def parse_vehicle_description(payload: dict):
+    """
+    Parse a natural language vehicle description into structured form fields.
+    e.g. "2018 BMW X5 from Japan" → {year, make, model, vehicleType, originCountry}
+    """
+    from langchain_mistralai import ChatMistralAI
+    from config.settings import settings
+
+    description = payload.get("description", "").strip()
+    if not description:
+        raise HTTPException(status_code=422, detail="description is required")
+
+    llm = ChatMistralAI(
+        model=settings.MISTRAL_MODEL,
+        temperature=0,
+        mistral_api_key=settings.MISTRAL_API_KEY
+    )
+
+    prompt = f"""
+    Extract vehicle and shipping details from this text: "{description}"
+
+    Return ONLY a JSON object with these fields (use empty string if unknown):
+    - year (4-digit number as string, e.g. "2018")
+    - make (brand name, e.g. "Toyota")
+    - model (model name, e.g. "Land Cruiser")
+    - vehicleType (one of: sedan, suv, truck, van, luxury, motorcycle, hatchback, wagon, coupe, convertible — pick best match)
+    - engineSize (numeric cc, e.g. "2500", empty if unknown)
+    - originCountry (one of: japan, uk, uae, usa — or empty if unknown)
+
+    Return only valid JSON, no explanation.
+    """
+
+    try:
+        response = llm.invoke(prompt)
+        import json, re
+        # Extract JSON even if wrapped in markdown fences
+        content = response.content.strip()
+        match = re.search(r'\{.*\}', content, re.DOTALL)
+        parsed = json.loads(match.group(0) if match else content)
+        return {"success": True, "data": parsed}
+    except Exception as e:
+        logger.error(f"Parse description error: {str(e)}")
+        return {"success": False, "data": {}, "error": str(e)}
+
+
+# Vehicle Type & Engine Suggester (Make+Model → suggestions)
+@app.post("/agents/suggest-vehicle")
+async def suggest_vehicle_details(payload: dict):
+    """
+    Given a make and model, suggest vehicle type, typical engine size, and origin country.
+    e.g. {make: "Toyota", model: "Land Cruiser"} → {vehicleType: "suv", engineSize: "4500", originCountry: "japan"}
+    """
+    from langchain_mistralai import ChatMistralAI
+    from config.settings import settings
+
+    make = payload.get("make", "").strip()
+    model = payload.get("model", "").strip()
+    if not make:
+        raise HTTPException(status_code=422, detail="make is required")
+
+    llm = ChatMistralAI(
+        model=settings.MISTRAL_MODEL,
+        temperature=0,
+        mistral_api_key=settings.MISTRAL_API_KEY
+    )
+
+    prompt = f"""
+    For the vehicle: {make} {model}
+
+    Return ONLY a JSON object with:
+    - vehicleType (one of: sedan, suv, truck, van, luxury, motorcycle, hatchback, wagon, coupe, convertible)
+    - engineSize (typical engine displacement in cc as a number string, e.g. "2000")
+    - originCountry (most common country this model is imported from to Africa — one of: japan, uk, uae, usa — or empty)
+    - confidence (0.0 to 1.0 — how confident you are)
+
+    Return only valid JSON, no explanation.
+    """
+
+    try:
+        response = llm.invoke(prompt)
+        import json, re
+        content = response.content.strip()
+        match = re.search(r'\{.*\}', content, re.DOTALL)
+        parsed = json.loads(match.group(0) if match else content)
+        return {"success": True, "data": parsed}
+    except Exception as e:
+        logger.error(f"Suggest vehicle error: {str(e)}")
+        return {"success": False, "data": {}, "error": str(e)}
+
+
+# Quote Preview (live estimate without saving)
+@app.post("/agents/quote-preview")
+async def quote_preview(
+    request: dict,
+    agent: QuoteAgent = Depends(get_quote_agent)
+):
+    """
+    Generate a quick cost estimate without saving to DB.
+    Used for the live preview panel on the Get Quote form.
+    Requires: vehicle_type, year, make, origin_country, shipping_method
+    """
+    from models.schemas import VehicleType, ShippingMethod
+    try:
+        # Provide defaults for missing optional fields
+        request.setdefault("model", "")
+        request.setdefault("engine_size", None)
+        request.setdefault("destination_country", "Uganda")
+        request.setdefault("destination_port", "Port Bell")
+
+        vt = request.get("vehicle_type", "sedan")
+        sm = request.get("shipping_method", "roro")
+
+        # Validate enums permissively
+        try:
+            VehicleType(vt)
+        except ValueError:
+            request["vehicle_type"] = "sedan"
+        try:
+            ShippingMethod(sm)
+        except ValueError:
+            request["shipping_method"] = "roro"
+
+        logger.info(f"Generating quote preview for {request.get('make')} {request.get('model')}")
+        result = await agent.execute(request)
+        # Strip the reference so it's clearly a preview
+        result.pop("quote_reference", None)
+        result["is_preview"] = True
+        return result
+    except Exception as e:
+        logger.error(f"Quote preview error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Field Consistency Validator
+@app.post("/agents/validate-vehicle")
+async def validate_vehicle_fields(payload: dict):
+    """
+    Check for inconsistencies in vehicle fields and return soft warnings.
+    e.g. high mileage on a new vehicle, unlikely engine size for a make/model.
+    """
+    from langchain_mistralai import ChatMistralAI
+    from config.settings import settings
+
+    llm = ChatMistralAI(
+        model=settings.MISTRAL_MODEL,
+        temperature=0,
+        mistral_api_key=settings.MISTRAL_API_KEY
+    )
+
+    prompt = f"""
+    Check these vehicle details for obvious inconsistencies or errors:
+    - Year: {payload.get('year', '')}
+    - Make: {payload.get('make', '')}
+    - Model: {payload.get('model', '')}
+    - Vehicle Type: {payload.get('vehicleType', '')}
+    - Engine Size: {payload.get('engineSize', '')} cc
+    - Color: {payload.get('color', '')}
+
+    If everything looks reasonable, return: {{"valid": true, "warnings": []}}
+    If there are issues, return a JSON with: {{"valid": false, "warnings": ["warning 1", "warning 2"]}}
+
+    Keep warnings short (under 15 words each). Only flag real problems.
+    Return only valid JSON, no explanation.
+    """
+
+    try:
+        response = llm.invoke(prompt)
+        import json, re
+        content = response.content.strip()
+        match = re.search(r'\{.*\}', content, re.DOTALL)
+        parsed = json.loads(match.group(0) if match else content)
+        return {"success": True, **parsed}
+    except Exception as e:
+        logger.error(f"Validate vehicle error: {str(e)}")
+        return {"success": True, "valid": True, "warnings": []}
+
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     """Global exception handler"""

@@ -19,6 +19,7 @@ const WhyChooseUs = () => {
       gradient: 'from-blue-500 to-blue-600',
       iconBg: 'bg-blue-100',
       iconColor: 'text-blue-600',
+      accentBorder: 'border-l-blue-500',
       stats: '< 60 sec quotes'
     },
     {
@@ -28,6 +29,7 @@ const WhyChooseUs = () => {
       gradient: 'from-green-500 to-green-600',
       iconBg: 'bg-green-100',
       iconColor: 'text-green-600',
+      accentBorder: 'border-l-green-500',
       stats: '100% insured'
     },
     {
@@ -37,6 +39,7 @@ const WhyChooseUs = () => {
       gradient: 'from-purple-500 to-purple-600',
       iconBg: 'bg-purple-100',
       iconColor: 'text-purple-600',
+      accentBorder: 'border-l-purple-500',
       stats: '15+ years local'
     },
     {
@@ -46,6 +49,7 @@ const WhyChooseUs = () => {
       gradient: 'from-orange-500 to-orange-600',
       iconBg: 'bg-orange-100',
       iconColor: 'text-orange-600',
+      accentBorder: 'border-l-orange-500',
       stats: '98% on-time'
     },
     {
@@ -55,6 +59,7 @@ const WhyChooseUs = () => {
       gradient: 'from-yellow-500 to-yellow-600',
       iconBg: 'bg-yellow-100',
       iconColor: 'text-yellow-600',
+      accentBorder: 'border-l-yellow-500',
       stats: 'No hidden fees'
     },
     {
@@ -64,6 +69,7 @@ const WhyChooseUs = () => {
       gradient: 'from-pink-500 to-pink-600',
       iconBg: 'bg-pink-100',
       iconColor: 'text-pink-600',
+      accentBorder: 'border-l-pink-500',
       stats: '24/7 available'
     }
   ];
@@ -117,7 +123,7 @@ const WhyChooseUs = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
           {features.map((feature, index) => (
             <div key={index} className="group">
-              <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 h-full">
+              <div className={`bg-white rounded-2xl p-8 shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 border border-gray-100 border-l-4 ${feature.accentBorder} h-full`}>
                 <div className="flex items-start gap-4 mb-6">
                   <div className={`w-16 h-16 ${feature.iconBg} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
                     <feature.icon className={`text-2xl ${feature.iconColor}`} />
@@ -134,7 +140,6 @@ const WhyChooseUs = () => {
                 <p className="text-gray-600 leading-relaxed">
                   {feature.description}
                 </p>
-                <div className={`h-1 bg-gradient-to-r ${feature.gradient} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 mt-6 rounded-full`}></div>
               </div>
             </div>
           ))}
