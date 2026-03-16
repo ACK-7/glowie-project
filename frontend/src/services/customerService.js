@@ -233,17 +233,30 @@ export const getCustomerPayments = async () => {
   }
 };
 
+export const submitCustomerPayment = async (paymentData) => {
+  const response = await axios.post(
+    `${API_BASE_URL}/payments`,
+    paymentData,
+    { headers: getCustomerAuthHeaders() }
+  );
+  return response.data;
+};
+
 // Customer Shipment Tracking API
 export const getCustomerShipments = async () => {
   try {
     const bookings = await getCustomerBookings();
-    const bookingsData = bookings.data || bookings || [];
+    // Handle paginated response: { data: { data: [...], meta: {...} } }
+    const bookingsData = bookings?.data?.data || bookings?.data || bookings || [];
+    if (!Array.isArray(bookingsData)) return { data: [] };
 
     // Get shipment details for each booking
     const shipmentsPromises = bookingsData.map(async (booking) => {
       try {
+        // Try booking_reference first (more reliable), fall back to id
+        const trackingKey = booking.booking_reference || booking.id;
         const response = await axios.get(
-          `${API_BASE_URL}/tracking/${booking.id}`,
+          `${API_BASE_URL}/tracking/${trackingKey}`,
           {
             headers: getCustomerAuthHeaders(),
           },
@@ -288,10 +301,10 @@ export const getCustomerDashboardStats = async () => {
       getCustomerPayments().catch(() => ({ data: [] })),
     ]);
 
-    const quotesData = quotes.data || quotes || [];
-    const bookingsData = bookings.data || bookings || [];
-    const documentsData = documents.data || documents || [];
-    const paymentsData = payments.data || payments || [];
+    const quotesData = quotes?.data?.data || quotes?.data || quotes || [];
+    const bookingsData = bookings?.data?.data || bookings?.data || bookings || [];
+    const documentsData = documents?.data?.data || documents?.data || documents || [];
+    const paymentsData = payments?.data?.data || payments?.data || payments || [];
 
     // Calculate stats
     const activeShipments = bookingsData.filter((booking) =>
@@ -299,14 +312,13 @@ export const getCustomerDashboardStats = async () => {
     ).length;
 
     const pendingPayments = paymentsData.filter(
-      (payment) => payment.status === "pending" || payment.status === "partial",
+      (payment) => payment.status === "pending",
     );
 
-    const totalBalance = pendingPayments.reduce((sum, payment) => {
-      return (
-        sum +
-        (parseFloat(payment.amount || 0) - parseFloat(payment.paid_amount || 0))
-      );
+    // Calculate balance from bookings (more reliable than payment records)
+    const totalBalance = bookingsData.reduce((sum, booking) => {
+      const balance = parseFloat(booking.balance_amount ?? (parseFloat(booking.total_amount || 0) - parseFloat(booking.paid_amount || 0)));
+      return sum + (balance > 0 ? balance : 0);
     }, 0);
 
     const pendingDocuments = documentsData.filter(
@@ -403,7 +415,12 @@ export const getStatusColor = (status) => {
     delivered: "bg-green-100 text-green-800",
     processing: "bg-orange-100 text-orange-800",
     paid: "bg-green-100 text-green-800",
+    completed: "bg-green-100 text-green-800",
     partial: "bg-yellow-100 text-yellow-800",
+    unpaid: "bg-orange-100 text-orange-800",
+    cancelled: "bg-red-100 text-red-800",
+    failed: "bg-red-100 text-red-800",
+    refunded: "bg-gray-100 text-gray-800",
   };
   return colors[status] || "bg-gray-100 text-gray-800";
 };

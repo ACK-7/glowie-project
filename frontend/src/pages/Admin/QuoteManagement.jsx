@@ -36,6 +36,7 @@ import {
 } from '../../services/adminService';
 import { showAlert, showConfirm } from '../../utils/sweetAlert';
 import QuoteCreateModal from '../../components/Admin/QuoteCreateModal';
+import DropdownMenu from '../../components/UI/DropdownMenu';
 
 const QuoteManagement = () => {
   const navigate = useNavigate();
@@ -51,6 +52,7 @@ const QuoteManagement = () => {
 
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingQuote, setEditingQuote] = useState(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -349,6 +351,32 @@ const QuoteManagement = () => {
     }
   };
 
+  const handleEdit = (quote) => {
+    setEditingQuote(quote);
+    setShowCreateModal(true);
+  };
+
+  const handleDelete = async (quote) => {
+    try {
+      const confirmed = await showConfirm(
+        'Delete Quote',
+        `Are you sure you want to delete quote ${quote.quote_reference || `Q-${quote.id}`}? This action cannot be undone.`,
+        'warning',
+        'Delete',
+        'Cancel'
+      );
+      if (confirmed) {
+        const { deleteQuote } = await import('../../services/adminService');
+        await deleteQuote(quote.id);
+        await showAlert('Success', 'Quote deleted successfully', 'success');
+        fetchData();
+      }
+    } catch (err) {
+      console.error('Delete failed:', err);
+      await showAlert('Error', 'Failed to delete quote', 'error');
+    }
+  };
+
   const calculateQuote = async () => {
     if (!formData.origin || !formData.vehicleType) {
       await showAlert('Error', 'Please fill in vehicle type and origin', 'error');
@@ -379,11 +407,13 @@ const QuoteManagement = () => {
 
   const handleCreateSave = () => {
     setShowCreateModal(false);
-    fetchData(); // Refresh the quotes list
+    setEditingQuote(null);
+    fetchData();
   };
 
   const handleCreateClose = () => {
     setShowCreateModal(false);
+    setEditingQuote(null);
   };
 
   const getStatusBadge = (status) => {
@@ -694,7 +724,7 @@ const QuoteManagement = () => {
                             {quote.customer_name || 
                              (quote.customer?.first_name && quote.customer?.last_name 
                                ? `${quote.customer.first_name} ${quote.customer.last_name}` 
-                               : quote.customer?.name || 'Unknown Customer')}
+                               : quote.customer?.full_name || quote.customer?.name || 'Unknown Customer')}
                           </p>
                           <p className="text-gray-400 text-sm">
                             {quote.customer_email || quote.customer?.email || 'No email'}
@@ -743,42 +773,41 @@ const QuoteManagement = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          {quote.status === 'pending' && (
-                            <>
-                              <button
-                                onClick={() => handleApprove(quote)}
-                                className="p-2 text-green-400 hover:text-green-300 hover:bg-green-900/20 rounded-lg transition-colors"
-                                title="Approve Quote"
-                              >
-                                <FaCheck />
-                              </button>
-                              <button
-                                onClick={() => handleReject(quote)}
-                                className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors"
-                                title="Reject Quote"
-                              >
-                                <FaTimes />
-                              </button>
-                            </>
-                          )}
-                          {quote.status === 'approved' && (
-                            <button
-                              onClick={() => handleConvertToBooking(quote)}
-                              className="p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded-lg transition-colors"
-                              title="Convert to Booking"
-                            >
-                              <FaPaperPlane />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => navigate(`/admin/quotes/${quote.id}`)}
-                            className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
-                            title="View Details"
-                          >
-                            <FaEye />
-                          </button>
-                        </div>
+                        <DropdownMenu
+                          items={[
+                            {
+                              label: 'View Details',
+                              icon: <FaEye />,
+                              onClick: () => navigate(`/admin/quotes/${quote.id}`)
+                            },
+                            {
+                              label: 'Edit Quote',
+                              icon: <FaEdit />,
+                              onClick: () => handleEdit(quote)
+                            },
+                            quote.status === 'pending' && {
+                              label: 'Approve',
+                              icon: <FaCheck />,
+                              onClick: () => handleApprove(quote)
+                            },
+                            quote.status === 'pending' && {
+                              label: 'Reject',
+                              icon: <FaTimes />,
+                              onClick: () => handleReject(quote)
+                            },
+                            quote.status === 'approved' && {
+                              label: 'Convert to Booking',
+                              icon: <FaPaperPlane />,
+                              onClick: () => handleConvertToBooking(quote)
+                            },
+                            {
+                              label: 'Delete Quote',
+                              icon: <FaTrash />,
+                              danger: true,
+                              onClick: () => handleDelete(quote)
+                            }
+                          ].filter(Boolean)}
+                        />
                       </td>
                     </tr>
                   ))
@@ -871,11 +900,12 @@ const QuoteManagement = () => {
         </div>
       )}
 
-      {/* Create Quote Modal */}
+      {/* Create/Edit Quote Modal */}
       {showCreateModal && (
         <QuoteCreateModal
           onClose={handleCreateClose}
           onSave={handleCreateSave}
+          editingQuote={editingQuote}
         />
       )}
     </div>

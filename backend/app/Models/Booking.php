@@ -47,6 +47,8 @@ class Booking extends Model
         'paid_amount' => 'decimal:2',
     ];
 
+    protected $appends = ['payment_status', 'balance_amount'];
+
     protected $attributes = [
         'status' => 'pending',
         'currency' => 'USD',
@@ -208,14 +210,23 @@ class Booking extends Model
      */
     public function getBalanceAmountAttribute()
     {
-        return $this->total_amount - $this->paid_amount;
+        $completedSum = $this->relationLoaded('payments')
+            ? $this->payments->where('status', 'completed')->sum('amount')
+            : $this->payments()->where('status', 'completed')->sum('amount');
+        $totalPaid = max((float) $this->paid_amount, (float) $completedSum);
+        return max(0, $this->total_amount - $totalPaid);
     }
 
     public function getPaymentStatusAttribute()
     {
-        if ($this->paid_amount >= $this->total_amount) {
+        $completedSum = $this->relationLoaded('payments')
+            ? $this->payments->where('status', 'completed')->sum('amount')
+            : $this->payments()->where('status', 'completed')->sum('amount');
+        $totalPaid = max((float) $this->paid_amount, (float) $completedSum);
+
+        if ($totalPaid >= $this->total_amount && $this->total_amount > 0) {
             return 'paid';
-        } elseif ($this->paid_amount > 0) {
+        } elseif ($totalPaid > 0) {
             return 'partial';
         }
         return 'unpaid';

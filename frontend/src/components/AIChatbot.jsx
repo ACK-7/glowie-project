@@ -66,7 +66,10 @@ const AIChatbot = () => {
 
     // Add user message
     setMessages((prev) => {
-      const updated = [...prev, { type: "user", text: userMessage, timestamp: new Date() }];
+      const updated = [
+        ...prev,
+        { type: "user", text: userMessage, timestamp: new Date() },
+      ];
       saveChatHistory(updated);
       return updated;
     });
@@ -87,14 +90,24 @@ const AIChatbot = () => {
         "I apologize, but I couldn't generate a response.";
 
       setMessages((prev) => {
-        const updated = [...prev, { type: "ai", text: aiResponse, timestamp: new Date() }];
+        const updated = [
+          ...prev,
+          { type: "ai", text: aiResponse, timestamp: new Date() },
+        ];
         saveChatHistory(updated);
         return updated;
       });
     } catch (error) {
       console.error("Chatbot error:", error);
       setMessages((prev) => {
-        const updated = [...prev, { type: "ai", text: "I apologize, but I'm having trouble connecting right now. Please try again or contact us directly.", timestamp: new Date() }];
+        const updated = [
+          ...prev,
+          {
+            type: "ai",
+            text: "I apologize, but I'm having trouble connecting right now. Please try again or contact us directly.",
+            timestamp: new Date(),
+          },
+        ];
         saveChatHistory(updated);
         return updated;
       });

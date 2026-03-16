@@ -99,7 +99,7 @@ const MessageCenter = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
                           <p className={`font-semibold ${(msg.is_unread || msg.unread) ? 'text-white' : 'text-gray-300'}`}>
-                            {msg.customer?.name || msg.from || msg.customer_name || 'Unknown'}
+                            {msg.customer?.full_name || msg.customer?.name || msg.from || msg.customer_name || 'Unknown'}
                           </p>
                           <span className="text-gray-500 text-xs">
                             {msg.created_at ? new Date(msg.created_at).toLocaleString() : msg.time || 'N/A'}
@@ -121,7 +121,7 @@ const MessageCenter = () => {
                 <div className="px-6 py-4 border-b border-gray-800">
                   <h3 className="text-white font-bold mb-1">{selectedMessage.subject || selectedMessage.title || 'No subject'}</h3>
                   <p className="text-gray-400 text-sm">
-                    From: {selectedMessage.customer?.name || selectedMessage.from || selectedMessage.customer_name || 'Unknown'}
+                    From: {selectedMessage.customer?.full_name || selectedMessage.customer?.name || selectedMessage.from || selectedMessage.customer_name || 'Unknown'}
                   </p>
                 </div>
                 <div className="flex-1 p-6">

@@ -588,7 +588,7 @@ const DocumentManager = () => {
     const bookingRef = booking.booking_reference || booking.reference_number || `BK-${booking.id}`;
     const customerName = booking.customer?.first_name && booking.customer?.last_name 
       ? `${booking.customer.first_name} ${booking.customer.last_name}`
-      : booking.customer?.name || '';
+      : booking.customer?.full_name || booking.customer?.name || '';
     
     return (
       bookingRef.toLowerCase().includes(searchLower) ||
@@ -674,7 +674,7 @@ const DocumentManager = () => {
                     <div className="text-xs opacity-75">
                       {booking.customer?.first_name && booking.customer?.last_name 
                         ? `${booking.customer.first_name} ${booking.customer.last_name}`
-                        : booking.customer?.name || 'Unknown Customer'
+                        : booking.customer?.full_name || booking.customer?.name || 'Unknown Customer'
                       }
                     </div>
                   </button>

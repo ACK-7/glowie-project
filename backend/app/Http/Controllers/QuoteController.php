@@ -244,9 +244,48 @@ class QuoteController extends BaseApiController
                 return $this->errorResponse('Cannot update converted quotes', 400);
             }
             
-            $validatedData = $this->validateRequest($request, Quote::validationRules());
+            $validatedData = $this->validateRequest($request, [
+                'customer_id' => 'sometimes|exists:customers,id',
+                'customer_name' => 'sometimes|string|max:255',
+                'customer_email' => 'sometimes|email|max:255',
+                'customer_phone' => 'sometimes|string|max:50',
+                'route_id' => 'sometimes|exists:routes,id',
+                'origin_country' => 'sometimes|string|max:100',
+                'origin_city' => 'sometimes|string|max:100',
+                'destination_country' => 'sometimes|string|max:100',
+                'destination_city' => 'sometimes|string|max:100',
+                'vehicle_details' => 'sometimes|array',
+                'vehicle_details.make' => 'sometimes|string|max:100',
+                'vehicle_details.model' => 'sometimes|string|max:100',
+                'vehicle_details.year' => 'sometimes',
+                'base_price' => 'sometimes|numeric|min:0',
+                'shipping_cost' => 'sometimes|numeric|min:0',
+                'insurance_cost' => 'sometimes|numeric|min:0',
+                'customs_cost' => 'sometimes|numeric|min:0',
+                'handling_cost' => 'sometimes|numeric|min:0',
+                'additional_fees' => 'nullable|array',
+                'total_amount' => 'sometimes|numeric|min:0',
+                'currency' => 'sometimes|string|size:3',
+                'valid_until' => 'sometimes|date',
+                'status' => 'sometimes|in:' . implode(',', Quote::VALID_STATUSES),
+                'notes' => 'nullable|string',
+                'special_requirements' => 'nullable|string',
+            ]);
             
-            $updatedQuote = $this->quoteRepository->update($id, $validatedData);
+            // Only pass fillable fields to the repository
+            $fillableFields = ['vehicle_details', 'total_amount', 'currency', 'valid_until', 'status', 'notes', 'base_price', 'customer_id', 'route_id', 'additional_fees'];
+            $updateData = array_intersect_key($validatedData, array_flip($fillableFields));
+            
+            // Map frontend fields to model fields
+            if (isset($validatedData['shipping_cost'])) {
+                $updateData['base_price'] = $validatedData['shipping_cost'];
+            }
+            if (isset($validatedData['total_amount'])) {
+                $updateData['total_amount'] = $validatedData['total_amount'];
+            }
+            
+            $this->quoteRepository->update($id, $updateData);
+            $updatedQuote = $this->quoteRepository->find($id);
             
             return $this->updatedResponse($updatedQuote->load([
                 'customer', 'route'
@@ -254,6 +293,29 @@ class QuoteController extends BaseApiController
             
         } catch (ValidationException $e) {
             return $this->validationErrorResponse($e);
+        } catch (Exception $e) {
+            return $this->handleException($e);
+        }
+    }
+
+    /**
+     * Delete a quote
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        try {
+            $quote = $this->quoteRepository->find($id);
+            if (!$quote) {
+                return $this->notFoundResponse('Quote');
+            }
+
+            if ($quote->status === Quote::STATUS_CONVERTED) {
+                return $this->errorResponse('Cannot delete converted quotes', 400);
+            }
+
+            $this->quoteRepository->delete($id);
+
+            return $this->successResponse(null, 'Quote deleted successfully');
         } catch (Exception $e) {
             return $this->handleException($e);
         }

@@ -54,12 +54,12 @@ class BookingRepository extends BaseRepository implements BookingRepositoryInter
     /**
      * Get filtered and paginated bookings with relationships
      */
-    public function getFilteredPaginated(array $filters = [], int $perPage = 15): LengthAwarePaginator
+    public function getFilteredPaginated(array $filters = [], int $perPage = 15, array $with = [], string $sortBy = 'created_at', string $sortOrder = 'desc'): LengthAwarePaginator
     {
         $query = $this->model->newQuery();
         
         // Always load relationships
-        $query->with(['customer', 'quote', 'route', 'vehicle']);
+        $query->with(['customer', 'quote', 'route', 'vehicle', 'payments']);
         
         // Apply filters
         foreach ($filters as $key => $value) {
@@ -152,7 +152,7 @@ class BookingRepository extends BaseRepository implements BookingRepositoryInter
     public function getByCustomer(int $customerId): Collection
     {
         return $this->model->byCustomer($customerId)
-            ->with(['vehicle', 'route', 'quote', 'shipment'])
+            ->with(['vehicle', 'route', 'quote', 'shipment', 'payments'])
             ->orderBy('created_at', 'desc')
             ->get();
     }

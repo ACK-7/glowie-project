@@ -1,63 +1,102 @@
-import React, { useState } from 'react';
-import { 
-  FaTimes, 
+import React, { useState } from "react";
+import {
+  FaTimes,
   FaPlus,
+  FaEdit,
   FaCar,
   FaMapMarkerAlt,
   FaUser,
   FaDollarSign,
   FaCalendarAlt,
-  FaInfoCircle
-} from 'react-icons/fa';
-import { createQuote } from '../../services/adminService';
-import { showAlert } from '../../utils/sweetAlert';
+  FaInfoCircle,
+} from "react-icons/fa";
+import { createQuote, updateQuote } from "../../services/adminService";
+import { showAlert } from "../../utils/sweetAlert";
 
-const QuoteCreateModal = ({ onClose, onSave }) => {
-  const [formData, setFormData] = useState({
-    // Customer Information
-    customer_name: '',
-    customer_email: '',
-    customer_phone: '',
-    
-    // Vehicle Information
-    vehicle_make: '',
-    vehicle_model: '',
-    vehicle_year: '',
-    vehicle_type: 'sedan',
-    vehicle_condition: 'used',
-    
-    // Route Information
-    origin_country: '',
-    origin_city: '',
-    destination_country: 'Uganda',
-    destination_city: 'Kampala',
-    
-    // Quote Details
-    shipping_cost: '',
-    insurance_cost: '',
-    customs_cost: '',
-    handling_cost: '',
-    total_amount: '',
-    currency: 'USD',
-    valid_until: '',
-    
-    // Additional Information
-    notes: '',
-    special_requirements: ''
-  });
-  
+const QuoteCreateModal = ({ onClose, onSave, editingQuote = null }) => {
+  const isEditMode = !!editingQuote;
+
+  const buildInitialFormData = () => {
+    if (editingQuote) {
+      const vd = editingQuote.vehicle_details || {};
+      return {
+        customer_name:
+          editingQuote.customer_name || editingQuote.customer?.full_name || editingQuote.customer?.name || "",
+        customer_email:
+          editingQuote.customer_email || editingQuote.customer?.email || "",
+        customer_phone:
+          editingQuote.customer_phone || editingQuote.customer?.phone || "",
+        vehicle_make: vd.make || "",
+        vehicle_model: vd.model || "",
+        vehicle_year: vd.year || "",
+        vehicle_type: vd.type || editingQuote.vehicle_type || "sedan",
+        vehicle_condition: vd.condition || "used",
+        origin_country: editingQuote.origin_country || "",
+        origin_city: editingQuote.origin_city || "",
+        destination_country: editingQuote.destination_country || "Uganda",
+        destination_city: editingQuote.destination_city || "Kampala",
+        shipping_cost: editingQuote.shipping_cost?.toString() || "",
+        insurance_cost: editingQuote.insurance_cost?.toString() || "",
+        customs_cost: editingQuote.customs_cost?.toString() || "",
+        handling_cost: editingQuote.handling_cost?.toString() || "",
+        total_amount:
+          editingQuote.total_amount?.toString() ||
+          editingQuote.estimated_cost?.toString() ||
+          "",
+        currency: editingQuote.currency || "USD",
+        valid_until: editingQuote.valid_until
+          ? editingQuote.valid_until.split("T")[0]
+          : "",
+        notes: editingQuote.notes || "",
+        special_requirements: editingQuote.special_requirements || "",
+      };
+    }
+    return {
+      customer_name: "",
+      customer_email: "",
+      customer_phone: "",
+      vehicle_make: "",
+      vehicle_model: "",
+      vehicle_year: "",
+      vehicle_type: "sedan",
+      vehicle_condition: "used",
+      origin_country: "",
+      origin_city: "",
+      destination_country: "Uganda",
+      destination_city: "Kampala",
+      shipping_cost: "",
+      insurance_cost: "",
+      customs_cost: "",
+      handling_cost: "",
+      total_amount: "",
+      currency: "USD",
+      valid_until: "",
+      notes: "",
+      special_requirements: "",
+    };
+  };
+
+  const [formData, setFormData] = useState(buildInitialFormData());
+
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('customer');
+  const [activeTab, setActiveTab] = useState("customer");
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
-    
+
     // Auto-calculate total when individual costs change
-    if (['shipping_cost', 'insurance_cost', 'customs_cost', 'handling_cost'].includes(name)) {
+    if (
+      [
+        "shipping_cost",
+        "insurance_cost",
+        "customs_cost",
+        "handling_cost",
+      ].includes(name)
+    ) {
       calculateTotal({ ...formData, [name]: value });
     }
   };
@@ -67,9 +106,9 @@ const QuoteCreateModal = ({ onClose, onSave }) => {
     const insurance = parseFloat(data.insurance_cost) || 0;
     const customs = parseFloat(data.customs_cost) || 0;
     const handling = parseFloat(data.handling_cost) || 0;
-    
+
     const total = shipping + insurance + customs + handling;
-    setFormData(prev => ({ ...prev, total_amount: total.toString() }));
+    setFormData((prev) => ({ ...prev, total_amount: total.toString() }));
   };
 
   const handleSubmit = async (e) => {
@@ -83,22 +122,22 @@ const QuoteCreateModal = ({ onClose, onSave }) => {
         customer_name: formData.customer_name,
         customer_email: formData.customer_email,
         customer_phone: formData.customer_phone,
-        
+
         // Vehicle info
         vehicle_details: {
           make: formData.vehicle_make,
           model: formData.vehicle_model,
           year: formData.vehicle_year,
           type: formData.vehicle_type,
-          condition: formData.vehicle_condition
+          condition: formData.vehicle_condition,
         },
-        
+
         // Route info
         origin_country: formData.origin_country,
         origin_city: formData.origin_city,
         destination_country: formData.destination_country,
         destination_city: formData.destination_city,
-        
+
         // Costs
         shipping_cost: parseFloat(formData.shipping_cost) || 0,
         insurance_cost: parseFloat(formData.insurance_cost) || 0,
@@ -106,35 +145,45 @@ const QuoteCreateModal = ({ onClose, onSave }) => {
         handling_cost: parseFloat(formData.handling_cost) || 0,
         total_amount: parseFloat(formData.total_amount) || 0,
         currency: formData.currency,
-        
+
         // Validity
         valid_until: formData.valid_until,
-        
+
         // Additional info
         notes: formData.notes,
         special_requirements: formData.special_requirements,
-        
+
         // Default status
-        status: 'pending'
+        status: isEditMode ? (editingQuote.status || "pending") : "pending",
       };
 
-      await createQuote(quoteData);
-      await showAlert('Success', 'Quote created successfully', 'success');
+      if (isEditMode) {
+        // Remove empty strings to avoid validation issues on optional fields
+        const cleanData = Object.fromEntries(
+          Object.entries(quoteData).filter(([_, v]) => v !== '' && v !== null && v !== undefined)
+        );
+        await updateQuote(editingQuote.id, cleanData);
+        await showAlert('Success', 'Quote updated successfully', 'success');
+      } else {
+        await createQuote(quoteData);
+        await showAlert('Success', 'Quote created successfully', 'success');
+      }
       onSave();
     } catch (error) {
-      console.error('Create failed:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to create quote';
-      await showAlert('Error', errorMessage, 'error');
+      console.error(isEditMode ? "Update failed:" : "Create failed:", error);
+      const errorMessage =
+        error.response?.data?.message || (isEditMode ? "Failed to update quote" : "Failed to create quote");
+      await showAlert("Error", errorMessage, "error");
     } finally {
       setLoading(false);
     }
   };
 
   const tabs = [
-    { id: 'customer', label: 'Customer Info', icon: FaUser },
-    { id: 'vehicle', label: 'Vehicle Details', icon: FaCar },
-    { id: 'route', label: 'Route & Location', icon: FaMapMarkerAlt },
-    { id: 'pricing', label: 'Pricing & Terms', icon: FaDollarSign }
+    { id: "customer", label: "Customer Info", icon: FaUser },
+    { id: "vehicle", label: "Vehicle Details", icon: FaCar },
+    { id: "route", label: "Route & Location", icon: FaMapMarkerAlt },
+    { id: "pricing", label: "Pricing & Terms", icon: FaDollarSign },
   ];
 
   // Set default expiry date (30 days from now)
@@ -142,9 +191,9 @@ const QuoteCreateModal = ({ onClose, onSave }) => {
     if (!formData.valid_until) {
       const defaultExpiry = new Date();
       defaultExpiry.setDate(defaultExpiry.getDate() + 30);
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        valid_until: defaultExpiry.toISOString().split('T')[0]
+        valid_until: defaultExpiry.toISOString().split("T")[0],
       }));
     }
   }, []);
@@ -155,10 +204,14 @@ const QuoteCreateModal = ({ onClose, onSave }) => {
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-800">
           <div className="flex items-center gap-4">
-            <FaPlus className="text-blue-500 text-2xl" />
+            {isEditMode ? <FaEdit className="text-blue-500 text-2xl" /> : <FaPlus className="text-blue-500 text-2xl" />}
             <div>
-              <h2 className="text-2xl font-bold text-white">Create New Quote</h2>
-              <p className="text-gray-400">Generate a shipping quote for a customer</p>
+              <h2 className="text-2xl font-bold text-white">
+                {isEditMode ? 'Edit Quote' : 'Create New Quote'}
+              </h2>
+              <p className="text-gray-400">
+                {isEditMode ? `Editing quote ${editingQuote.quote_reference || `Q-${editingQuote.id}`}` : 'Generate a shipping quote for a customer'}
+              </p>
             </div>
           </div>
           <button
@@ -179,8 +232,8 @@ const QuoteCreateModal = ({ onClose, onSave }) => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
                   activeTab === tab.id
-                    ? 'text-blue-400 border-b-2 border-blue-400 bg-blue-900/10'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                    ? "text-blue-400 border-b-2 border-blue-400 bg-blue-900/10"
+                    : "text-gray-400 hover:text-white hover:bg-gray-800/50"
                 }`}
               >
                 <IconComponent />
@@ -193,8 +246,13 @@ const QuoteCreateModal = ({ onClose, onSave }) => {
         <form onSubmit={handleSubmit}>
           <div className="p-6 space-y-6">
             {/* Customer Info Tab */}
-            {activeTab === 'customer' && (
+            {activeTab === "customer" && (
               <div className="space-y-4">
+                {isEditMode && (
+                  <div className="bg-blue-900/20 border border-blue-800 rounded-lg p-3 text-blue-300 text-sm">
+                    Customer info is linked to the customer record and cannot be changed here.
+                  </div>
+                )}
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -206,7 +264,8 @@ const QuoteCreateModal = ({ onClose, onSave }) => {
                       value={formData.customer_name}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                      disabled={isEditMode}
+                      className={`w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 ${isEditMode ? 'opacity-60 cursor-not-allowed' : ''}`}
                       placeholder="Enter customer full name"
                     />
                   </div>
@@ -221,7 +280,8 @@ const QuoteCreateModal = ({ onClose, onSave }) => {
                       value={formData.customer_email}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                      disabled={isEditMode}
+                      className={`w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 ${isEditMode ? 'opacity-60 cursor-not-allowed' : ''}`}
                       placeholder="customer@example.com"
                     />
                   </div>
@@ -236,7 +296,8 @@ const QuoteCreateModal = ({ onClose, onSave }) => {
                     name="customer_phone"
                     value={formData.customer_phone}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                    disabled={isEditMode}
+                    className={`w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 ${isEditMode ? 'opacity-60 cursor-not-allowed' : ''}`}
                     placeholder="+256 700 000 000"
                   />
                 </div>
@@ -244,7 +305,7 @@ const QuoteCreateModal = ({ onClose, onSave }) => {
             )}
 
             {/* Vehicle Details Tab */}
-            {activeTab === 'vehicle' && (
+            {activeTab === "vehicle" && (
               <div className="space-y-4">
                 <div className="grid md:grid-cols-3 gap-4">
                   <div>
@@ -336,7 +397,7 @@ const QuoteCreateModal = ({ onClose, onSave }) => {
             )}
 
             {/* Route & Location Tab */}
-            {activeTab === 'route' && (
+            {activeTab === "route" && (
               <div className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-4">
@@ -380,7 +441,9 @@ const QuoteCreateModal = ({ onClose, onSave }) => {
                   </div>
 
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-white">Destination</h3>
+                    <h3 className="text-lg font-semibold text-white">
+                      Destination
+                    </h3>
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
                         Country
@@ -413,11 +476,13 @@ const QuoteCreateModal = ({ onClose, onSave }) => {
             )}
 
             {/* Pricing & Terms Tab */}
-            {activeTab === 'pricing' && (
+            {activeTab === "pricing" && (
               <div className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-white">Cost Breakdown</h3>
+                    <h3 className="text-lg font-semibold text-white">
+                      Cost Breakdown
+                    </h3>
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
                         Shipping Cost *
@@ -482,14 +547,19 @@ const QuoteCreateModal = ({ onClose, onSave }) => {
                   </div>
 
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-white">Quote Terms</h3>
+                    <h3 className="text-lg font-semibold text-white">
+                      Quote Terms
+                    </h3>
                     <div className="bg-green-900/20 border border-green-700/50 rounded-lg p-4">
                       <p className="text-gray-400 text-sm mb-1">Total Amount</p>
                       <p className="text-green-400 text-2xl font-bold">
-                        ${formData.total_amount ? parseFloat(formData.total_amount).toLocaleString() : '0'}
+                        $
+                        {formData.total_amount
+                          ? parseFloat(formData.total_amount).toLocaleString()
+                          : "0"}
                       </p>
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
                         Currency
@@ -506,7 +576,7 @@ const QuoteCreateModal = ({ onClose, onSave }) => {
                         <option value="JPY">JPY</option>
                       </select>
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
                         Valid Until *
@@ -537,7 +607,7 @@ const QuoteCreateModal = ({ onClose, onSave }) => {
                       placeholder="Any special handling requirements, delivery instructions, etc."
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
                       Internal Notes
@@ -557,10 +627,14 @@ const QuoteCreateModal = ({ onClose, onSave }) => {
                   <div className="flex items-start gap-3">
                     <FaInfoCircle className="text-blue-400 mt-1" />
                     <div>
-                      <h4 className="text-blue-400 font-medium mb-1">Quote Information</h4>
+                      <h4 className="text-blue-400 font-medium mb-1">
+                        Quote Information
+                      </h4>
                       <p className="text-gray-300 text-sm">
-                        This quote will be created with "Pending" status and will require approval before being sent to the customer. 
-                        The customer will receive an email notification once the quote is approved.
+                        This quote will be created with "Pending" status and
+                        will require approval before being sent to the customer.
+                        The customer will receive an email notification once the
+                        quote is approved.
                       </p>
                     </div>
                   </div>
@@ -586,12 +660,12 @@ const QuoteCreateModal = ({ onClose, onSave }) => {
               {loading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Creating...
+                  {isEditMode ? 'Updating...' : 'Creating...'}
                 </>
               ) : (
                 <>
-                  <FaPlus />
-                  Create Quote
+                  {isEditMode ? <FaEdit /> : <FaPlus />}
+                  {isEditMode ? 'Update Quote' : 'Create Quote'}
                 </>
               )}
             </button>

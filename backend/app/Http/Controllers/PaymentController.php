@@ -118,6 +118,60 @@ class PaymentController extends BaseApiController
     }
 
     /**
+     * Process a customer-initiated payment submission
+     */
+    public function process(Request $request): JsonResponse
+    {
+        $request->validate([
+            'booking_id' => 'required|exists:bookings,id',
+            'amount' => 'required|numeric|min:0.01',
+            'payment_method' => 'required|in:' . implode(',', Payment::VALID_METHODS),
+            'transaction_id' => 'nullable|string|max:100',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $user = $request->user();
+            $booking = \App\Models\Booking::findOrFail($request->booking_id);
+            
+            // Ensure customer owns the booking
+            $customerId = null;
+            if ($user instanceof \App\Models\Customer) {
+                $customerId = $user->id;
+                if ($booking->customer_id !== $user->id) {
+                    return $this->errorResponse('Unauthorized: booking does not belong to you', 403);
+                }
+            }
+
+            $paymentData = [
+                'booking_id' => $request->booking_id,
+                'customer_id' => $customerId ?? $booking->customer_id,
+                'amount' => $request->amount,
+                'currency' => $booking->currency ?? 'USD',
+                'payment_method' => $request->payment_method,
+                'transaction_id' => $request->transaction_id,
+                'status' => 'pending',
+                'notes' => $request->notes,
+                'payment_date' => now(),
+            ];
+
+            $payment = Payment::create($paymentData);
+
+            return $this->successResponse(
+                $payment->load(['booking.customer', 'customer']),
+                'Payment submitted successfully. Awaiting verification.',
+                201
+            );
+        } catch (Exception $e) {
+            Log::error('Failed to process customer payment', [
+                'error' => $e->getMessage(),
+                'data' => $request->all()
+            ]);
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    /**
      * Display the specified payment with comprehensive details
      * 
      * @param int $id
@@ -178,7 +232,8 @@ class PaymentController extends BaseApiController
     public function update(PaymentRequest $request, int $id): JsonResponse
     {
         try {
-            $payment = $this->paymentRepository->update($id, $request->validated());
+            $this->paymentRepository->update($id, $request->validated());
+            $payment = $this->paymentRepository->find($id);
             
             return $this->successResponse(
                 $payment->load(['booking.customer', 'customer']),

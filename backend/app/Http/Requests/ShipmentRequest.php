@@ -34,9 +34,12 @@ class ShipmentRequest extends FormRequest
             'actual_arrival' => 'nullable|date|after:departure_date',
         ];
 
-        // For updates, make booking_id optional
+        // For updates, make booking_id optional and allow past departure dates
         if ($this->isMethod('PUT') || $this->isMethod('PATCH')) {
             $rules['booking_id'] = 'sometimes|exists:bookings,id';
+            $rules['departure_date'] = 'nullable|date';
+            $rules['estimated_arrival'] = 'nullable|date';
+            $rules['actual_arrival'] = 'nullable|date';
         }
 
         return $rules;

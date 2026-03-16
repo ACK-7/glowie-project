@@ -49,6 +49,8 @@ class Customer extends Authenticatable
         'reset_token_expires_at',
     ];
 
+    protected $appends = ['full_name'];
+
     protected $casts = [
         'email_verified_at' => 'datetime',
         'date_of_birth' => 'date',

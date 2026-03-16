@@ -149,7 +149,8 @@ class ShipmentService
             $this->validateShipmentUpdateData($shipment, $data);
             
             // Update the shipment
-            $shipment = $this->shipmentRepository->update($shipmentId, $data);
+            $this->shipmentRepository->update($shipmentId, $data);
+            $shipment = $this->shipmentRepository->findOrFail($shipmentId);
             
             // Generate notifications if significant changes
             if ($this->hasSignificantChanges($originalData, $data)) {

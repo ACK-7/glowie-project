@@ -6,6 +6,7 @@ use App\Models\Shipment;
 use App\Repositories\Contracts\ShipmentRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -75,11 +76,66 @@ class ShipmentRepository extends BaseRepository implements ShipmentRepositoryInt
     }
 
     /**
+     * Override to support $with relationships and sorting
+     */
+    public function getFilteredPaginated(array $filters = [], int $perPage = 15, array $with = [], string $sortBy = 'created_at', string $sortOrder = 'desc'): LengthAwarePaginator
+    {
+        $query = $this->model->newQuery();
+
+        if (!empty($with)) {
+            $query->with($with);
+        }
+
+        // Apply common filters
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+        if (!empty($filters['carrier_name'])) {
+            $query->where('carrier_name', 'like', '%' . $filters['carrier_name'] . '%');
+        }
+        if (!empty($filters['departure_port'])) {
+            $query->where('departure_port', 'like', '%' . $filters['departure_port'] . '%');
+        }
+        if (!empty($filters['arrival_port'])) {
+            $query->where('arrival_port', 'like', '%' . $filters['arrival_port'] . '%');
+        }
+        if (!empty($filters['booking_id'])) {
+            $query->where('booking_id', $filters['booking_id']);
+        }
+        if (!empty($filters['delayed'])) {
+            $query->where('status', 'delayed');
+        }
+        if (!empty($filters['overdue'])) {
+            $query->where('estimated_arrival', '<', now())
+                  ->whereNotIn('status', ['delivered']);
+        }
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('tracking_number', 'like', "%{$search}%")
+                  ->orWhere('carrier_name', 'like', "%{$search}%")
+                  ->orWhere('vessel_name', 'like', "%{$search}%")
+                  ->orWhere('container_number', 'like', "%{$search}%");
+            });
+        }
+
+        $allowedSorts = ['created_at', 'updated_at', 'departure_date', 'estimated_arrival', 'status'];
+        $sortBy = in_array($sortBy, $allowedSorts) ? $sortBy : 'created_at';
+        $sortOrder = strtolower($sortOrder) === 'asc' ? 'asc' : 'desc';
+
+        return $query->orderBy($sortBy, $sortOrder)->paginate($perPage);
+    }
+
+    /**
      * Find shipment by tracking number
      */
     public function findByTrackingNumber(string $trackingNumber): ?Shipment
     {
-        return $this->model->where('tracking_number', $trackingNumber)->first();
+        return $this->model->where('tracking_number', $trackingNumber)
+            ->orWhereHas('booking', function ($q) use ($trackingNumber) {
+                $q->where('booking_reference', $trackingNumber);
+            })
+            ->first();
     }
 
     /**

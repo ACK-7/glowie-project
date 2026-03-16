@@ -20,7 +20,8 @@ const Header = () => {
   const [isServicesOpen, setIsServicesOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const location = useLocation();
-  const { isAuthenticated: isCustomerLoggedIn, loading: authLoading } = useCustomerAuth();
+  const { isAuthenticated: isCustomerLoggedIn, loading: authLoading } =
+    useCustomerAuth();
 
   const isHomePage = location.pathname === "/";
 

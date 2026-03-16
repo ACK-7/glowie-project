@@ -61,7 +61,7 @@ interface BaseRepositoryInterface
     /**
      * Get filtered and paginated results
      */
-    public function getFilteredPaginated(array $filters = [], int $perPage = 15): LengthAwarePaginator;
+    public function getFilteredPaginated(array $filters = [], int $perPage = 15, array $with = [], string $sortBy = 'created_at', string $sortOrder = 'desc'): LengthAwarePaginator;
 
     /**
      * Count total records

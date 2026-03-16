@@ -39,6 +39,7 @@ class PaymentRequest extends FormRequest
             $rules['amount'] = 'sometimes|numeric|min:0.01';
             $rules['currency'] = 'sometimes|string|size:3';
             $rules['payment_method'] = 'sometimes|in:' . implode(',', Payment::VALID_METHODS);
+            $rules['status'] = 'sometimes|in:' . implode(',', Payment::VALID_STATUSES);
         }
 
         return $rules;

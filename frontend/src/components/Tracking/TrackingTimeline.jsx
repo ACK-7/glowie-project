@@ -1,5 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { FaShip, FaTruck, FaCheckCircle, FaMapMarkerAlt, FaClock, FaExclamationTriangle } from 'react-icons/fa';
+import React, { useState, useEffect } from "react";
+import {
+  FaShip,
+  FaTruck,
+  FaCheckCircle,
+  FaMapMarkerAlt,
+  FaClock,
+  FaExclamationTriangle,
+} from "react-icons/fa";
 
 const TrackingTimeline = ({ trackingNumber, shipmentId, isPublic = false }) => {
   const [timelineData, setTimelineData] = useState(null);
@@ -22,25 +29,44 @@ const TrackingTimeline = ({ trackingNumber, shipmentId, isPublic = false }) => {
         // Public tracking endpoint
         response = await fetch(`/api/tracking/${trackingNumber}/timeline`);
       } else if (shipmentId) {
-        // Admin tracking endpoint
-        const token = localStorage.getItem('token');
-        response = await fetch(`/api/admin/crud/shipments/${shipmentId}/timeline`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        // Admin tracking endpoint — try admin token first, fall back to customer token
+        const token =
+          localStorage.getItem("token") ||
+          localStorage.getItem("customer_token");
+        response = await fetch(
+          `/api/admin/crud/shipments/${shipmentId}/timeline`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          },
+        );
+      }
+
+      if (!response) {
+        throw new Error("No tracking identifier provided");
+      }
+
+      // Check content type before parsing — backend may return HTML on 404
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        // Not JSON — treat as "no data yet" rather than an error
+        setTimelineData(null);
+        setLoading(false);
+        return;
       }
 
       if (!response.ok) {
-        throw new Error('Failed to load timeline data');
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || "Failed to load timeline data");
       }
 
       const data = await response.json();
       if (data.success) {
         setTimelineData(data.data);
       } else {
-        throw new Error(data.message || 'Failed to load timeline data');
+        throw new Error(data.message || "Failed to load timeline data");
       }
     } catch (err) {
       setError(err.message);
@@ -53,26 +79,26 @@ const TrackingTimeline = ({ trackingNumber, shipmentId, isPublic = false }) => {
     if (isCurrent) {
       return <FaTruck className="animate-pulse" />;
     }
-    
+
     switch (status?.toLowerCase()) {
-      case 'booked':
-      case 'confirmed':
+      case "booked":
+      case "confirmed":
         return <FaCheckCircle />;
-      case 'picked_up':
-      case 'collected':
+      case "picked_up":
+      case "collected":
         return <FaTruck />;
-      case 'in_transit':
-      case 'shipped':
-      case 'on_vessel':
+      case "in_transit":
+      case "shipped":
+      case "on_vessel":
         return <FaShip />;
-      case 'arrived':
-      case 'in_port':
+      case "arrived":
+      case "in_port":
         return <FaMapMarkerAlt />;
-      case 'delivered':
-      case 'completed':
+      case "delivered":
+      case "completed":
         return <FaCheckCircle />;
-      case 'delayed':
-      case 'issue':
+      case "delayed":
+      case "issue":
         return <FaExclamationTriangle />;
       default:
         return <FaClock />;
@@ -81,40 +107,53 @@ const TrackingTimeline = ({ trackingNumber, shipmentId, isPublic = false }) => {
 
   const getStatusColor = (status, isCompleted, isCurrent) => {
     if (isCurrent) {
-      return 'bg-blue-600 text-white';
+      return "bg-blue-600 text-white";
     }
-    
+
     if (isCompleted) {
-      return 'bg-green-500 text-white';
+      return "bg-green-500 text-white";
     }
 
     switch (status?.toLowerCase()) {
-      case 'delayed':
-      case 'issue':
-        return 'bg-yellow-500 text-white';
-      case 'cancelled':
-      case 'failed':
-        return 'bg-red-500 text-white';
+      case "delayed":
+      case "issue":
+        return "bg-yellow-500 text-white";
+      case "cancelled":
+      case "failed":
+        return "bg-red-500 text-white";
       default:
-        return 'bg-gray-200 text-gray-400';
+        return "bg-gray-200 text-gray-400";
     }
   };
 
   const getStatusDescription = (event) => {
     const descriptions = {
-      'booked': 'Your vehicle booking has been confirmed and is being prepared for shipment.',
-      'picked_up': 'Vehicle has been collected from the origin location and is ready for transport.',
-      'in_transit': 'Your vehicle is currently being transported to the destination.',
-      'on_vessel': 'Vehicle is loaded on the shipping vessel and en route to the destination port.',
-      'arrived': 'Vehicle has arrived at the destination port and is being processed.',
-      'in_port': 'Vehicle is currently at the port awaiting customs clearance and final transport.',
-      'out_for_delivery': 'Vehicle is on the final leg of delivery to your specified location.',
-      'delivered': 'Vehicle has been successfully delivered to the destination.',
-      'delayed': 'There is a delay in the shipment. We will update you with new timing soon.',
-      'issue': 'An issue has been identified with the shipment. Our team is working to resolve it.'
+      booked:
+        "Your vehicle booking has been confirmed and is being prepared for shipment.",
+      picked_up:
+        "Vehicle has been collected from the origin location and is ready for transport.",
+      in_transit:
+        "Your vehicle is currently being transported to the destination.",
+      on_vessel:
+        "Vehicle is loaded on the shipping vessel and en route to the destination port.",
+      arrived:
+        "Vehicle has arrived at the destination port and is being processed.",
+      in_port:
+        "Vehicle is currently at the port awaiting customs clearance and final transport.",
+      out_for_delivery:
+        "Vehicle is on the final leg of delivery to your specified location.",
+      delivered: "Vehicle has been successfully delivered to the destination.",
+      delayed:
+        "There is a delay in the shipment. We will update you with new timing soon.",
+      issue:
+        "An issue has been identified with the shipment. Our team is working to resolve it.",
     };
 
-    return event.description || descriptions[event.status?.toLowerCase()] || 'Status update for your shipment.';
+    return (
+      event.description ||
+      descriptions[event.status?.toLowerCase()] ||
+      "Status update for your shipment."
+    );
   };
 
   const refreshTimeline = () => {
@@ -149,12 +188,26 @@ const TrackingTimeline = ({ trackingNumber, shipmentId, isPublic = false }) => {
     );
   }
 
-  if (!timelineData || !timelineData.events || timelineData.events.length === 0) {
+  if (
+    !timelineData ||
+    !timelineData.events ||
+    timelineData.events.length === 0
+  ) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <FaClock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">No timeline data available</p>
+          <FaShip className="h-12 w-12 text-blue-200 mx-auto mb-4" />
+          <p className="text-gray-700 font-medium">No tracking events yet</p>
+          <p className="text-sm text-gray-500 mt-2 max-w-sm mx-auto">
+            Tracking updates will appear here once your shipment is in transit.
+            Check back soon or use the Map View to see your shipment progress.
+          </p>
+          <button
+            onClick={refreshTimeline}
+            className="mt-4 px-4 py-2 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+          >
+            Refresh
+          </button>
         </div>
       </div>
     );
@@ -165,11 +218,13 @@ const TrackingTimeline = ({ trackingNumber, shipmentId, isPublic = false }) => {
       {/* Timeline Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">Shipment Timeline</h3>
+          <h3 className="text-lg font-semibold text-gray-900">
+            Shipment Timeline
+          </h3>
           {timelineData.shipment_info && (
             <p className="text-sm text-gray-600 mt-1">
-              Tracking: {timelineData.shipment_info.tracking_number} • 
-              Status: {timelineData.shipment_info.status}
+              Tracking: {timelineData.shipment_info.tracking_number} • Status:{" "}
+              {timelineData.shipment_info.status}
             </p>
           )}
         </div>
@@ -185,17 +240,19 @@ const TrackingTimeline = ({ trackingNumber, shipmentId, isPublic = false }) => {
       <div className="relative">
         {/* Timeline Line */}
         <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200"></div>
-        
+
         <div className="space-y-8">
           {timelineData.events.map((event, index) => {
-            const isCompleted = event.completed || event.status === 'completed';
+            const isCompleted = event.completed || event.status === "completed";
             const isCurrent = event.current || event.is_current;
             const isLast = index === timelineData.events.length - 1;
 
             return (
               <div key={index} className="relative flex items-start">
                 {/* Timeline Icon */}
-                <div className={`relative z-10 flex items-center justify-center w-12 h-12 rounded-full text-xl ${getStatusColor(event.status, isCompleted, isCurrent)}`}>
+                <div
+                  className={`relative z-10 flex items-center justify-center w-12 h-12 rounded-full text-xl ${getStatusColor(event.status, isCompleted, isCurrent)}`}
+                >
                   {getStatusIcon(event.status, isCompleted, isCurrent)}
                 </div>
 
@@ -204,10 +261,12 @@ const TrackingTimeline = ({ trackingNumber, shipmentId, isPublic = false }) => {
                   <div className="bg-gray-50 rounded-lg p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h4 className={`text-lg font-semibold mb-1 ${isCurrent ? 'text-blue-600' : 'text-gray-900'}`}>
+                        <h4
+                          className={`text-lg font-semibold mb-1 ${isCurrent ? "text-blue-600" : "text-gray-900"}`}
+                        >
                           {event.title || event.status_display || event.status}
                         </h4>
-                        
+
                         {event.location && (
                           <p className="text-sm text-gray-600 mb-2 flex items-center">
                             <FaMapMarkerAlt className="mr-1 h-3 w-3" />
@@ -221,13 +280,18 @@ const TrackingTimeline = ({ trackingNumber, shipmentId, isPublic = false }) => {
 
                         {event.notes && (
                           <div className="bg-blue-50 rounded p-3 mb-3">
-                            <p className="text-sm text-blue-800">{event.notes}</p>
+                            <p className="text-sm text-blue-800">
+                              {event.notes}
+                            </p>
                           </div>
                         )}
 
                         {event.estimated_completion && !isCompleted && (
                           <p className="text-xs text-gray-500">
-                            Estimated completion: {new Date(event.estimated_completion).toLocaleString()}
+                            Estimated completion:{" "}
+                            {new Date(
+                              event.estimated_completion,
+                            ).toLocaleString()}
                           </p>
                         )}
                       </div>
@@ -235,13 +299,15 @@ const TrackingTimeline = ({ trackingNumber, shipmentId, isPublic = false }) => {
                       <div className="ml-4 text-right flex-shrink-0">
                         {event.timestamp && (
                           <div className="text-sm text-gray-600">
-                            <div>{new Date(event.timestamp).toLocaleDateString()}</div>
+                            <div>
+                              {new Date(event.timestamp).toLocaleDateString()}
+                            </div>
                             <div className="text-xs text-gray-500">
                               {new Date(event.timestamp).toLocaleTimeString()}
                             </div>
                           </div>
                         )}
-                        
+
                         {isCurrent && (
                           <div className="mt-2">
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -257,9 +323,14 @@ const TrackingTimeline = ({ trackingNumber, shipmentId, isPublic = false }) => {
                       <div className="mt-3 pt-3 border-t border-gray-200">
                         <div className="space-y-1">
                           {event.details.map((detail, detailIndex) => (
-                            <div key={detailIndex} className="flex justify-between text-xs text-gray-600">
+                            <div
+                              key={detailIndex}
+                              className="flex justify-between text-xs text-gray-600"
+                            >
                               <span>{detail.label}:</span>
-                              <span className="font-medium">{detail.value}</span>
+                              <span className="font-medium">
+                                {detail.value}
+                              </span>
                             </div>
                           ))}
                         </div>
@@ -281,27 +352,34 @@ const TrackingTimeline = ({ trackingNumber, shipmentId, isPublic = false }) => {
             {timelineData.summary.total_distance && (
               <div>
                 <span className="text-blue-600 font-medium">Distance:</span>
-                <div className="text-blue-800">{timelineData.summary.total_distance}</div>
+                <div className="text-blue-800">
+                  {timelineData.summary.total_distance}
+                </div>
               </div>
             )}
             {timelineData.summary.transit_time && (
               <div>
                 <span className="text-blue-600 font-medium">Transit Time:</span>
-                <div className="text-blue-800">{timelineData.summary.transit_time}</div>
+                <div className="text-blue-800">
+                  {timelineData.summary.transit_time}
+                </div>
               </div>
             )}
             {timelineData.summary.completed_checkpoints && (
               <div>
                 <span className="text-blue-600 font-medium">Checkpoints:</span>
                 <div className="text-blue-800">
-                  {timelineData.summary.completed_checkpoints}/{timelineData.summary.total_checkpoints}
+                  {timelineData.summary.completed_checkpoints}/
+                  {timelineData.summary.total_checkpoints}
                 </div>
               </div>
             )}
             {timelineData.summary.next_update && (
               <div>
                 <span className="text-blue-600 font-medium">Next Update:</span>
-                <div className="text-blue-800">{timelineData.summary.next_update}</div>
+                <div className="text-blue-800">
+                  {timelineData.summary.next_update}
+                </div>
               </div>
             )}
           </div>

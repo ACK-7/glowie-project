@@ -91,7 +91,7 @@ const ShipmentTracking = () => {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(shipment => 
         (shipment.tracking_number || '').toLowerCase().includes(term) ||
-        (shipment.booking?.customer?.name || '').toLowerCase().includes(term) ||
+        (shipment.booking?.customer?.full_name || shipment.booking?.customer?.name || '').toLowerCase().includes(term) ||
         (shipment.booking?.vehicle?.make || '').toLowerCase().includes(term) ||
         (shipment.booking?.vehicle?.model || '').toLowerCase().includes(term) ||
         (shipment.carrier_name || '').toLowerCase().includes(term) ||
@@ -379,7 +379,7 @@ const ShipmentTracking = () => {
                       <td className="px-6 py-4">
                         <div>
                           <p className="text-white font-medium">
-                            {shipment.booking?.customer?.name || 'N/A'}
+                            {shipment.booking?.customer?.full_name || shipment.booking?.customer?.name || 'N/A'}
                           </p>
                           <p className="text-gray-400 text-sm">
                             {shipment.booking?.vehicle 

@@ -62,10 +62,18 @@ const Cars = () => {
     searchParams.get("sort") || "created_at",
   );
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedFuelType, setSelectedFuelType] = useState(searchParams.get('fuel_type') || '');
-  const [selectedTransmission, setSelectedTransmission] = useState(searchParams.get('transmission') || '');
-  const [selectedColor, setSelectedColor] = useState(searchParams.get('color') || '');
-  const [maxMileage, setMaxMileage] = useState(searchParams.get('mileage_max') || '');
+  const [selectedFuelType, setSelectedFuelType] = useState(
+    searchParams.get("fuel_type") || "",
+  );
+  const [selectedTransmission, setSelectedTransmission] = useState(
+    searchParams.get("transmission") || "",
+  );
+  const [selectedColor, setSelectedColor] = useState(
+    searchParams.get("color") || "",
+  );
+  const [maxMileage, setMaxMileage] = useState(
+    searchParams.get("mileage_max") || "",
+  );
   // Comparison state (max 3)
   const [compareList, setCompareList] = useState([]);
 
@@ -222,8 +230,9 @@ const Cars = () => {
   };
 
   const toggleCompare = (car) => {
-    setCompareList(prev => {
-      if (prev.find(c => c.id === car.id)) return prev.filter(c => c.id !== car.id);
+    setCompareList((prev) => {
+      if (prev.find((c) => c.id === car.id))
+        return prev.filter((c) => c.id !== car.id);
       if (prev.length >= 3) return prev;
       return [...prev, car];
     });
@@ -741,11 +750,15 @@ const Cars = () => {
                     <div className="flex gap-3">
                       <button
                         onClick={() => toggleCompare(car)}
-                        title={compareList.find(c => c.id === car.id) ? 'Remove from compare' : 'Add to compare (max 3)'}
+                        title={
+                          compareList.find((c) => c.id === car.id)
+                            ? "Remove from compare"
+                            : "Add to compare (max 3)"
+                        }
                         className={`p-3 rounded-lg font-semibold transition-all duration-300 border ${
-                          compareList.find(c => c.id === car.id)
-                            ? 'bg-orange-100 border-orange-300 text-orange-700'
-                            : 'bg-gray-100 border-gray-200 text-gray-600 hover:bg-gray-200'
+                          compareList.find((c) => c.id === car.id)
+                            ? "bg-orange-100 border-orange-300 text-orange-700"
+                            : "bg-gray-100 border-gray-200 text-gray-600 hover:bg-gray-200"
                         }`}
                       >
                         <FaExchangeAlt />
@@ -866,11 +879,15 @@ const Cars = () => {
                     <div className="flex gap-3">
                       <button
                         onClick={() => toggleCompare(car)}
-                        title={compareList.find(c => c.id === car.id) ? 'Remove from compare' : 'Add to compare (max 3)'}
+                        title={
+                          compareList.find((c) => c.id === car.id)
+                            ? "Remove from compare"
+                            : "Add to compare (max 3)"
+                        }
                         className={`p-3 rounded-lg font-semibold transition-all duration-300 border ${
-                          compareList.find(c => c.id === car.id)
-                            ? 'bg-orange-100 border-orange-300 text-orange-700'
-                            : 'bg-gray-100 border-gray-200 text-gray-600 hover:bg-gray-200'
+                          compareList.find((c) => c.id === car.id)
+                            ? "bg-orange-100 border-orange-300 text-orange-700"
+                            : "bg-gray-100 border-gray-200 text-gray-600 hover:bg-gray-200"
                         }`}
                       >
                         <FaExchangeAlt />
@@ -925,10 +942,18 @@ const Cars = () => {
                 <FaExchangeAlt className="text-blue-600" />
                 <span>Compare ({compareList.length}/3):</span>
               </div>
-              {compareList.map(car => (
-                <div key={car.id} className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5">
-                  <span className="text-sm font-medium text-blue-800">{car.brand?.name} {car.model}</span>
-                  <button onClick={() => toggleCompare(car)} className="text-blue-400 hover:text-red-500 transition-colors">
+              {compareList.map((car) => (
+                <div
+                  key={car.id}
+                  className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5"
+                >
+                  <span className="text-sm font-medium text-blue-800">
+                    {car.brand?.name} {car.model}
+                  </span>
+                  <button
+                    onClick={() => toggleCompare(car)}
+                    className="text-blue-400 hover:text-red-500 transition-colors"
+                  >
                     <FaTimes className="text-xs" />
                   </button>
                 </div>
@@ -937,16 +962,21 @@ const Cars = () => {
             <div className="flex items-center gap-3">
               {compareList.length >= 2 && (
                 <Link
-                  to={`/cars/compare?ids=${compareList.map(c => c.id).join(',')}`}
+                  to={`/cars/compare?ids=${compareList.map((c) => c.id).join(",")}`}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-semibold transition-colors text-sm"
                 >
                   Compare Now
                 </Link>
               )}
               {compareList.length < 2 && (
-                <span className="text-xs text-gray-500">Select at least 2 vehicles</span>
+                <span className="text-xs text-gray-500">
+                  Select at least 2 vehicles
+                </span>
               )}
-              <button onClick={() => setCompareList([])} className="text-sm text-gray-500 hover:text-red-500 transition-colors">
+              <button
+                onClick={() => setCompareList([])}
+                className="text-sm text-gray-500 hover:text-red-500 transition-colors"
+              >
                 Clear
               </button>
             </div>

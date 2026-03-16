@@ -72,7 +72,10 @@ class PaymentRepository extends BaseRepository implements PaymentRepositoryInter
      */
     public function getByCustomer(int $customerId): Collection
     {
-        return $this->model->byCustomer($customerId)->get();
+        return $this->model->byCustomer($customerId)
+            ->with(['booking.vehicle', 'booking.route'])
+            ->orderBy('created_at', 'desc')
+            ->get();
     }
 
     /**

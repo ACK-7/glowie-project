@@ -66,20 +66,20 @@ export const NotificationProvider = ({ children }) => {
     const headers = getAuthHeaders();
     if (!headers) return;
     try {
-      const response = await axios.get(`${API_BASE_URL}/customer/shipments`, {
+      const response = await axios.get(`${API_BASE_URL}/bookings`, {
         headers,
       });
       const shipments = response.data?.data || response.data || [];
       if (!Array.isArray(shipments)) return;
       shipments.forEach((shipment) => {
-        const id = shipment.id || shipment.tracking_number;
+        const id = shipment.id || shipment.booking_reference;
         const currentStatus = shipment.status;
         const previousStatus = prevShipmentStatuses.current[id];
         if (previousStatus !== undefined && previousStatus !== currentStatus) {
           addNotification({
             type: "shipment_update",
-            title: "Shipment Status Update",
-            message: `Your shipment ${shipment.tracking_number || "#" + id} is now: ${currentStatus.replace(/_/g, " ")}`,
+            title: "Booking Status Update",
+            message: `Your booking ${shipment.booking_reference || "#" + id} is now: ${currentStatus.replace(/_/g, " ")}`,
             shipmentId: id,
           });
         }

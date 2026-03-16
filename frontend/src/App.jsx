@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   Navigate,
+  useLocation,
 } from "react-router-dom";
 
 // Context
@@ -63,89 +64,96 @@ import Register from "./pages/Register";
 import CustomerPortal from "./pages/CustomerPortal";
 import DevCredentials from "./pages/DevCredentials";
 
+// Only show chatbot on non-admin pages
+function ChatbotWrapper() {
+  const location = useLocation();
+  if (location.pathname.startsWith('/admin')) return null;
+  return <AIChatbot />;
+}
+
 function App() {
   return (
     <AuthProvider>
       <CustomerAuthProvider>
         <NotificationProvider>
-        <Router>
-          <Routes>
-            {/* Public Website Routes */}
-            <Route element={<PublicLayout />}>
-              <Route path="/" element={<Home />} />
-              <Route path="/quote" element={<GetQuote />} />
-              <Route path="/services" element={<Services />} />
-              <Route path="/services/how-it-works" element={<HowItWorks />} />
-              <Route path="/services/request-quote" element={<GetQuote />} />
-              <Route
-                path="/services/inland-transport"
-                element={<InlandTransport />}
-              />
-              <Route
-                path="/services/customs-clearance"
-                element={<CustomsClearance />}
-              />
-              <Route path="/tracking" element={<ShipmentStatus />} />
-              <Route path="/track" element={<TrackShipment />} />
-              <Route
-                path="/track/:trackingNumber"
-                element={<TrackShipment />}
-              />
-              <Route path="/brands" element={<Brands />} />
-              <Route path="/cars" element={<Cars />} />
-              <Route path="/cars/compare" element={<CarCompare />} />
-              <Route path="/cars/:slug" element={<CarDetail />} />
-              <Route path="/favorites" element={<Favorites />} />
-              <Route path="/about" element={<AboutUs />} />
-              <Route path="/about/our-story" element={<OurStory />} />
-              <Route
-                path="/about/certifications"
-                element={<Certifications />}
-              />
-              <Route path="/faq" element={<FAQ />} />
-              <Route path="/news" element={<News />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/portal/dashboard" element={<CustomerPortal />} />
-              <Route path="/dev/credentials" element={<DevCredentials />} />
-            </Route>
+          <Router>
+            <Routes>
+              {/* Public Website Routes */}
+              <Route element={<PublicLayout />}>
+                <Route path="/" element={<Home />} />
+                <Route path="/quote" element={<GetQuote />} />
+                <Route path="/services" element={<Services />} />
+                <Route path="/services/how-it-works" element={<HowItWorks />} />
+                <Route path="/services/request-quote" element={<GetQuote />} />
+                <Route
+                  path="/services/inland-transport"
+                  element={<InlandTransport />}
+                />
+                <Route
+                  path="/services/customs-clearance"
+                  element={<CustomsClearance />}
+                />
+                <Route path="/tracking" element={<ShipmentStatus />} />
+                <Route path="/track" element={<TrackShipment />} />
+                <Route
+                  path="/track/:trackingNumber"
+                  element={<TrackShipment />}
+                />
+                <Route path="/brands" element={<Brands />} />
+                <Route path="/cars" element={<Cars />} />
+                <Route path="/cars/compare" element={<CarCompare />} />
+                <Route path="/cars/:slug" element={<CarDetail />} />
+                <Route path="/favorites" element={<Favorites />} />
+                <Route path="/about" element={<AboutUs />} />
+                <Route path="/about/our-story" element={<OurStory />} />
+                <Route
+                  path="/about/certifications"
+                  element={<Certifications />}
+                />
+                <Route path="/faq" element={<FAQ />} />
+                <Route path="/news" element={<News />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/portal/dashboard" element={<CustomerPortal />} />
+                <Route path="/dev/credentials" element={<DevCredentials />} />
+              </Route>
 
-            {/* Admin Login (Public) */}
-            <Route path="/admin/login" element={<AdminLogin />} />
+              {/* Admin Login (Public) */}
+              <Route path="/admin/login" element={<AdminLogin />} />
 
-            {/* Admin Dashboard Routes (Protected) */}
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute>
-                  <AdminLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<AdminPanel />} />
-              <Route path="bookings/new" element={<BookingCreate />} />
-              <Route path="bookings" element={<BookingsList />} />
-              <Route path="shipments" element={<ShipmentManagement />} />
-              <Route path="customers" element={<CustomersList />} />
-              <Route path="quotes/:id" element={<QuoteDetails />} />
-              <Route path="quotes" element={<QuoteManagement />} />
-              <Route path="finance" element={<FinanceDashboard />} />
-              <Route path="documents" element={<DocumentManager />} />
-              <Route path="reports" element={<ReportsHub />} />
-              <Route path="messages" element={<MessageCenter />} />
-              <Route path="users" element={<UserManagement />} />
-              <Route path="inventory" element={<CarInventoryManagement />} />
-              <Route path="settings" element={<AdminSettings />} />
-            </Route>
+              {/* Admin Dashboard Routes (Protected) */}
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<AdminPanel />} />
+                <Route path="bookings/new" element={<BookingCreate />} />
+                <Route path="bookings" element={<BookingsList />} />
+                <Route path="shipments" element={<ShipmentManagement />} />
+                <Route path="customers" element={<CustomersList />} />
+                <Route path="quotes/:id" element={<QuoteDetails />} />
+                <Route path="quotes" element={<QuoteManagement />} />
+                <Route path="finance" element={<FinanceDashboard />} />
+                <Route path="documents" element={<DocumentManager />} />
+                <Route path="reports" element={<ReportsHub />} />
+                <Route path="messages" element={<MessageCenter />} />
+                <Route path="users" element={<UserManagement />} />
+                <Route path="inventory" element={<CarInventoryManagement />} />
+                <Route path="settings" element={<AdminSettings />} />
+              </Route>
 
-            {/* 404 Not Found */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              {/* 404 Not Found */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
 
-          {/* Global AI Chatbot - Available on all pages */}
-          <AIChatbot />
-        </Router>
+            {/* AI Chatbot - Customer/Public pages only */}
+            <ChatbotWrapper />
+          </Router>
         </NotificationProvider>
       </CustomerAuthProvider>
     </AuthProvider>

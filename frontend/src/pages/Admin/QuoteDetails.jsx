@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   FaArrowLeft,
   FaSpinner,
@@ -16,10 +16,15 @@ import {
   FaFileAlt,
   FaPaperPlane,
   FaEdit,
-  FaHistory
-} from 'react-icons/fa';
-import { getQuote, approveQuote, rejectQuote, convertQuoteToBooking } from '../../services/adminService';
-import { showAlert, showConfirm } from '../../utils/sweetAlert';
+  FaHistory,
+} from "react-icons/fa";
+import {
+  getQuote,
+  approveQuote,
+  rejectQuote,
+  convertQuoteToBooking,
+} from "../../services/adminService";
+import { showAlert, showConfirm } from "../../utils/sweetAlert";
 
 const QuoteDetails = () => {
   const { id } = useParams();
@@ -37,7 +42,7 @@ const QuoteDetails = () => {
     try {
       setLoading(true);
       const response = await getQuote(id);
-      
+
       let quoteData = null;
       if (response?.data) {
         if (response.success) {
@@ -48,17 +53,17 @@ const QuoteDetails = () => {
           quoteData = response.data;
         }
       }
-      
+
       if (!quoteData) {
-        throw new Error('Quote not found');
+        throw new Error("Quote not found");
       }
-      
+
       setQuote(quoteData);
       setError(null);
     } catch (err) {
-      console.error('Failed to fetch quote details:', err);
-      setError('Failed to load quote details. Please try again.');
-      await showAlert('Error', 'Failed to load quote details', 'error');
+      console.error("Failed to fetch quote details:", err);
+      setError("Failed to load quote details. Please try again.");
+      await showAlert("Error", "Failed to load quote details", "error");
     } finally {
       setLoading(false);
     }
@@ -66,34 +71,45 @@ const QuoteDetails = () => {
 
   const handleApprove = async () => {
     const confirmed = await showConfirm(
-      'Approve Quote',
-      'Are you sure you want to approve this quote? The customer will be notified with login credentials.',
-      'question'
+      "Approve Quote",
+      "Are you sure you want to approve this quote? The customer will be notified with login credentials.",
+      "question",
     );
 
     if (confirmed) {
       try {
         setActionLoading(true);
-        const response = await approveQuote(quote.id, 'Quote approved by admin');
+        const response = await approveQuote(
+          quote.id,
+          "Quote approved by admin",
+        );
 
         // Handle both freshly-approved and already-approved responses gracefully
         const message =
           response?.message ||
-          (response?.data?.status === 'approved'
-            ? 'Quote approved successfully. Customer has been notified.'
-            : 'Quote approved successfully.');
+          (response?.data?.status === "approved"
+            ? "Quote approved successfully. Customer has been notified."
+            : "Quote approved successfully.");
 
-        await showAlert('Success', message, 'success');
+        await showAlert("Success", message, "success");
         await fetchQuoteDetails();
       } catch (error) {
-        console.error('Approve failed:', error);
+        console.error("Approve failed:", error);
 
         const backendMessage = error?.response?.data?.message;
-        if (backendMessage === 'Only pending quotes can be approved') {
-          await showAlert('Info', 'This quote is already approved or no longer pending.', 'info');
+        if (backendMessage === "Only pending quotes can be approved") {
+          await showAlert(
+            "Info",
+            "This quote is already approved or no longer pending.",
+            "info",
+          );
           await fetchQuoteDetails();
         } else {
-          await showAlert('Error', backendMessage || 'Failed to approve quote', 'error');
+          await showAlert(
+            "Error",
+            backendMessage || "Failed to approve quote",
+            "error",
+          );
         }
       } finally {
         setActionLoading(false);
@@ -103,21 +119,21 @@ const QuoteDetails = () => {
 
   const handleReject = async () => {
     const result = await showAlert.input(
-      'Reject Quote',
-      'Please provide a reason for rejecting this quote:',
-      'textarea',
-      'Enter rejection reason...'
+      "Reject Quote",
+      "Please provide a reason for rejecting this quote:",
+      "textarea",
+      "Enter rejection reason...",
     );
 
     if (result.isConfirmed && result.value) {
       try {
         setActionLoading(true);
         await rejectQuote(quote.id, result.value);
-        await showAlert.success('Success', 'Quote rejected successfully');
+        await showAlert.success("Success", "Quote rejected successfully");
         fetchQuoteDetails();
       } catch (error) {
-        console.error('Reject failed:', error);
-        await showAlert.error('Error', 'Failed to reject quote');
+        console.error("Reject failed:", error);
+        await showAlert.error("Error", "Failed to reject quote");
       } finally {
         setActionLoading(false);
       }
@@ -126,20 +142,24 @@ const QuoteDetails = () => {
 
   const handleConvertToBooking = async () => {
     const confirmed = await showConfirm(
-      'Convert to Booking',
-      'Convert this quote to a booking? This action cannot be undone.',
-      'question'
+      "Convert to Booking",
+      "Convert this quote to a booking? This action cannot be undone.",
+      "question",
     );
 
     if (confirmed) {
       try {
         setActionLoading(true);
         await convertQuoteToBooking(quote.id);
-        await showAlert('Success', 'Quote converted to booking successfully', 'success');
-        navigate('/admin/bookings');
+        await showAlert(
+          "Success",
+          "Quote converted to booking successfully",
+          "success",
+        );
+        navigate("/admin/bookings");
       } catch (error) {
-        console.error('Convert failed:', error);
-        await showAlert('Error', 'Failed to convert quote to booking', 'error');
+        console.error("Convert failed:", error);
+        await showAlert("Error", "Failed to convert quote to booking", "error");
       } finally {
         setActionLoading(false);
       }
@@ -148,16 +168,43 @@ const QuoteDetails = () => {
 
   const getStatusBadge = (status) => {
     const config = {
-      pending: { bg: 'bg-yellow-900/30', text: 'text-yellow-400', label: 'Pending', icon: FaClock },
-      approved: { bg: 'bg-green-900/30', text: 'text-green-400', label: 'Approved', icon: FaCheckCircle },
-      rejected: { bg: 'bg-red-900/30', text: 'text-red-400', label: 'Rejected', icon: FaTimes },
-      expired: { bg: 'bg-gray-900/30', text: 'text-gray-400', label: 'Expired', icon: FaExclamationCircle },
-      converted: { bg: 'bg-blue-900/30', text: 'text-blue-400', label: 'Converted', icon: FaCheck }
+      pending: {
+        bg: "bg-yellow-900/30",
+        text: "text-yellow-400",
+        label: "Pending",
+        icon: FaClock,
+      },
+      approved: {
+        bg: "bg-green-900/30",
+        text: "text-green-400",
+        label: "Approved",
+        icon: FaCheckCircle,
+      },
+      rejected: {
+        bg: "bg-red-900/30",
+        text: "text-red-400",
+        label: "Rejected",
+        icon: FaTimes,
+      },
+      expired: {
+        bg: "bg-gray-900/30",
+        text: "text-gray-400",
+        label: "Expired",
+        icon: FaExclamationCircle,
+      },
+      converted: {
+        bg: "bg-blue-900/30",
+        text: "text-blue-400",
+        label: "Converted",
+        icon: FaCheck,
+      },
     };
     const c = config[status] || config.pending;
     const IconComponent = c.icon;
     return (
-      <span className={`${c.bg} ${c.text} px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 w-fit`}>
+      <span
+        className={`${c.bg} ${c.text} px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 w-fit`}
+      >
         <IconComponent />
         {c.label}
       </span>
@@ -165,19 +212,22 @@ const QuoteDetails = () => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const formatCurrency = (amount) => {
-    if (!amount || amount === 0) return '0.00';
-    return Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (!amount || amount === 0) return "0.00";
+    return Number(amount).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   };
 
   if (loading) {
@@ -192,7 +242,7 @@ const QuoteDetails = () => {
     return (
       <div className="max-w-4xl mx-auto">
         <div className="bg-red-900/20 border border-red-700/50 rounded-xl p-6 text-center">
-          <p className="text-red-400">{error || 'Quote not found'}</p>
+          <p className="text-red-400">{error || "Quote not found"}</p>
           <Link
             to="/admin/quotes"
             className="mt-4 inline-flex items-center text-blue-400 hover:text-blue-300"
@@ -227,7 +277,7 @@ const QuoteDetails = () => {
       </div>
 
       {/* Action Buttons */}
-      {quote.status === 'pending' && (
+      {quote.status === "pending" && (
         <div className="bg-[#1a1f28] border border-gray-800 rounded-xl p-6">
           <div className="flex flex-wrap gap-4">
             <button
@@ -236,7 +286,7 @@ const QuoteDetails = () => {
               className="flex-1 min-w-[200px] px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <FaCheck />
-              {actionLoading ? 'Processing...' : 'Approve Quote'}
+              {actionLoading ? "Processing..." : "Approve Quote"}
             </button>
             <button
               onClick={handleReject}
@@ -250,7 +300,7 @@ const QuoteDetails = () => {
         </div>
       )}
 
-      {quote.status === 'approved' && (
+      {quote.status === "approved" && (
         <div className="bg-[#1a1f28] border border-gray-800 rounded-xl p-6">
           <button
             onClick={handleConvertToBooking}
@@ -258,7 +308,7 @@ const QuoteDetails = () => {
             className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
             <FaPaperPlane />
-            {actionLoading ? 'Converting...' : 'Convert to Booking'}
+            {actionLoading ? "Converting..." : "Convert to Booking"}
           </button>
         </div>
       )}
@@ -278,16 +328,22 @@ const QuoteDetails = () => {
                 <p className="text-white font-medium">
                   {quote.customer?.first_name && quote.customer?.last_name
                     ? `${quote.customer.first_name} ${quote.customer.last_name}`
-                    : quote.customer?.name || 'N/A'}
+                    : quote.customer?.full_name ||
+                      quote.customer?.name ||
+                      "N/A"}
                 </p>
               </div>
               <div>
                 <p className="text-gray-400 text-sm mb-1">Email</p>
-                <p className="text-white font-medium">{quote.customer?.email || 'N/A'}</p>
+                <p className="text-white font-medium">
+                  {quote.customer?.email || "N/A"}
+                </p>
               </div>
               <div>
                 <p className="text-gray-400 text-sm mb-1">Phone</p>
-                <p className="text-white font-medium">{quote.customer?.phone || 'N/A'}</p>
+                <p className="text-white font-medium">
+                  {quote.customer?.phone || "N/A"}
+                </p>
               </div>
               <div>
                 <p className="text-gray-400 text-sm mb-1">Customer ID</p>
@@ -306,25 +362,25 @@ const QuoteDetails = () => {
               <div>
                 <p className="text-gray-400 text-sm mb-1">Make</p>
                 <p className="text-white font-medium">
-                  {quote.vehicle_details?.make || 'N/A'}
+                  {quote.vehicle_details?.make || "N/A"}
                 </p>
               </div>
               <div>
                 <p className="text-gray-400 text-sm mb-1">Model</p>
                 <p className="text-white font-medium">
-                  {quote.vehicle_details?.model || 'N/A'}
+                  {quote.vehicle_details?.model || "N/A"}
                 </p>
               </div>
               <div>
                 <p className="text-gray-400 text-sm mb-1">Year</p>
                 <p className="text-white font-medium">
-                  {quote.vehicle_details?.year || 'N/A'}
+                  {quote.vehicle_details?.year || "N/A"}
                 </p>
               </div>
               <div>
                 <p className="text-gray-400 text-sm mb-1">Vehicle Type</p>
                 <p className="text-white font-medium">
-                  {quote.vehicle_details?.vehicle_type || 'N/A'}
+                  {quote.vehicle_details?.vehicle_type || "N/A"}
                 </p>
               </div>
               {quote.vehicle_details?.engine_size && (
@@ -350,57 +406,69 @@ const QuoteDetails = () => {
                 <p className="text-white font-medium">
                   {quote.route?.origin_city && quote.route?.origin_country
                     ? `${quote.route.origin_city}, ${quote.route.origin_country}`
-                    : quote.route?.origin_country || 'N/A'}
+                    : quote.route?.origin_country || "N/A"}
                 </p>
               </div>
               <div>
                 <p className="text-gray-400 text-sm mb-1">Destination</p>
                 <p className="text-white font-medium">
-                  {quote.route?.destination_city && quote.route?.destination_country
+                  {quote.route?.destination_city &&
+                  quote.route?.destination_country
                     ? `${quote.route.destination_city}, ${quote.route.destination_country}`
-                    : quote.route?.destination_country || 'N/A'}
+                    : quote.route?.destination_country || "N/A"}
                 </p>
               </div>
               {quote.route?.origin_port && (
                 <div>
                   <p className="text-gray-400 text-sm mb-1">Origin Port</p>
-                  <p className="text-white font-medium">{quote.route.origin_port}</p>
+                  <p className="text-white font-medium">
+                    {quote.route.origin_port}
+                  </p>
                 </div>
               )}
               {quote.route?.destination_port && (
                 <div>
                   <p className="text-gray-400 text-sm mb-1">Destination Port</p>
-                  <p className="text-white font-medium">{quote.route.destination_port}</p>
+                  <p className="text-white font-medium">
+                    {quote.route.destination_port}
+                  </p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Additional Fees Breakdown */}
-          {quote.additional_fees && Array.isArray(quote.additional_fees) && quote.additional_fees.length > 0 && (
-            <div className="bg-[#1a1f28] border border-gray-800 rounded-xl p-6">
-              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                <FaFileAlt className="text-blue-500" />
-                Fee Breakdown
-              </h2>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center pb-3 border-b border-gray-700">
-                  <span className="text-gray-400">Base Price</span>
-                  <span className="text-white font-semibold">
-                    ${formatCurrency(quote.base_price || 0)}
-                  </span>
-                </div>
-                {quote.additional_fees.map((fee, index) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <span className="text-gray-400">{fee.name || `Fee ${index + 1}`}</span>
+          {quote.additional_fees &&
+            Array.isArray(quote.additional_fees) &&
+            quote.additional_fees.length > 0 && (
+              <div className="bg-[#1a1f28] border border-gray-800 rounded-xl p-6">
+                <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                  <FaFileAlt className="text-blue-500" />
+                  Fee Breakdown
+                </h2>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center pb-3 border-b border-gray-700">
+                    <span className="text-gray-400">Base Price</span>
                     <span className="text-white font-semibold">
-                      ${formatCurrency(fee.amount || 0)}
+                      ${formatCurrency(quote.base_price || 0)}
                     </span>
                   </div>
-                ))}
+                  {quote.additional_fees.map((fee, index) => (
+                    <div
+                      key={index}
+                      className="flex justify-between items-center"
+                    >
+                      <span className="text-gray-400">
+                        {fee.name || `Fee ${index + 1}`}
+                      </span>
+                      <span className="text-white font-semibold">
+                        ${formatCurrency(fee.amount || 0)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
 
         {/* Sidebar */}
@@ -433,7 +501,7 @@ const QuoteDetails = () => {
                     ${formatCurrency(quote.total_amount || 0)}
                   </span>
                 </div>
-                {quote.currency && quote.currency !== 'USD' && (
+                {quote.currency && quote.currency !== "USD" && (
                   <p className="text-gray-400 text-xs mt-1 text-right">
                     Currency: {quote.currency}
                   </p>
@@ -451,25 +519,32 @@ const QuoteDetails = () => {
             <div className="space-y-4">
               <div>
                 <p className="text-gray-400 text-sm mb-1">Created</p>
-                <p className="text-white font-medium">{formatDate(quote.created_at)}</p>
+                <p className="text-white font-medium">
+                  {formatDate(quote.created_at)}
+                </p>
               </div>
               {quote.valid_until && (
                 <div>
                   <p className="text-gray-400 text-sm mb-1">Valid Until</p>
-                  <p className={`font-medium ${quote.is_expired ? 'text-red-400' : 'text-white'}`}>
+                  <p
+                    className={`font-medium ${quote.is_expired ? "text-red-400" : "text-white"}`}
+                  >
                     {formatDate(quote.valid_until)}
                   </p>
-                  {quote.days_until_expiry !== undefined && quote.days_until_expiry >= 0 && (
-                    <p className="text-gray-400 text-xs mt-1">
-                      {quote.days_until_expiry} days remaining
-                    </p>
-                  )}
+                  {quote.days_until_expiry !== undefined &&
+                    quote.days_until_expiry >= 0 && (
+                      <p className="text-gray-400 text-xs mt-1">
+                        {quote.days_until_expiry} days remaining
+                      </p>
+                    )}
                 </div>
               )}
               {quote.updated_at && quote.updated_at !== quote.created_at && (
                 <div>
                   <p className="text-gray-400 text-sm mb-1">Last Updated</p>
-                  <p className="text-white font-medium">{formatDate(quote.updated_at)}</p>
+                  <p className="text-white font-medium">
+                    {formatDate(quote.updated_at)}
+                  </p>
                 </div>
               )}
             </div>
@@ -501,8 +576,10 @@ const QuoteDetails = () => {
                 <div>
                   <p className="text-gray-400 mb-1">Created By</p>
                   <p className="text-white">
-                    {typeof quote.created_by === 'object' 
-                      ? (quote.created_by.name || quote.created_by.full_name || `User #${quote.created_by.id}`)
+                    {typeof quote.created_by === "object"
+                      ? quote.created_by.name ||
+                        quote.created_by.full_name ||
+                        `User #${quote.created_by.id}`
                       : `User #${quote.created_by}`}
                   </p>
                 </div>
@@ -511,8 +588,10 @@ const QuoteDetails = () => {
                 <div>
                   <p className="text-gray-400 mb-1">Approved By</p>
                   <p className="text-white">
-                    {typeof quote.approved_by === 'object'
-                      ? (quote.approved_by.name || quote.approved_by.full_name || `User #${quote.approved_by.id}`)
+                    {typeof quote.approved_by === "object"
+                      ? quote.approved_by.name ||
+                        quote.approved_by.full_name ||
+                        `User #${quote.approved_by.id}`
                       : `User #${quote.approved_by}`}
                   </p>
                 </div>

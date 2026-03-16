@@ -19,9 +19,11 @@ import {
   FaHistory,
   FaSearch,
   FaSignOutAlt,
+  FaSpinner,
 } from "react-icons/fa";
 import { showAlert } from "../utils/sweetAlert";
 import { useCustomerAuth } from "../context/CustomerAuthContext";
+import { useNotifications } from "../context/NotificationContextImpl";
 import { useNavigate } from "react-router-dom";
 import authService from "../services/authService";
 import * as customerService from "../services/customerService";
@@ -52,7 +54,23 @@ const CustomerPortal = () => {
     new_password_confirmation: "",
   });
   const [reviewBooking, setReviewBooking] = useState(null);
+  const [paymentItem, setPaymentItem] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
+  const [transactionRef, setTransactionRef] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
+  const [submittingPayment, setSubmittingPayment] = useState(false);
+  const [selectedQuote, setSelectedQuote] = useState(null);
+
+  // Auto-fill transaction reference when payment modal opens
+  useEffect(() => {
+    if (paymentItem) {
+      setTransactionRef(`REF-${paymentItem.reference}`);
+      setPaymentMethod('');
+      setPaymentNotes('');
+    }
+  }, [paymentItem]);
   const { customer, isAuthenticated, logout } = useCustomerAuth();
+  const { unreadCount, markAllRead } = useNotifications();
   const navigate = useNavigate();
 
   // Load customer data on component mount
@@ -61,6 +79,37 @@ const CustomerPortal = () => {
       loadAllCustomerData();
     }
   }, [isAuthenticated]);
+
+  // Auto-select first booking when switching to tracking tab
+  useEffect(() => {
+    if (activeTab === "tracking" && !selectedBooking && bookings.length > 0) {
+      setSelectedBooking(bookings[0]);
+    }
+  }, [activeTab, bookings]);
+
+  // Refresh shipment data (lightweight — only re-fetches shipments)
+  const refreshShipments = async () => {
+    try {
+      const shipmentsData = await customerService.getCustomerShipments();
+      const fresh = Array.isArray(shipmentsData.data) ? shipmentsData.data : Array.isArray(shipmentsData) ? shipmentsData : [];
+      setShipments(fresh);
+      // Also refresh selected booking's shipment reference
+      if (selectedBooking) {
+        const updated = fresh.find(s => s.booking_reference === selectedBooking.booking_reference || s.id === selectedBooking.id);
+        if (updated) setSelectedBooking(prev => ({ ...prev, shipment: updated.shipment }));
+      }
+    } catch (err) {
+      console.error("Shipment refresh error:", err);
+    }
+  };
+
+  // Auto-refresh shipments every 30s while on tracking tab
+  useEffect(() => {
+    if (activeTab !== "tracking") return;
+    refreshShipments();
+    const interval = setInterval(refreshShipments, 30000);
+    return () => clearInterval(interval);
+  }, [activeTab]);
 
   const loadAllCustomerData = async () => {
     setIsLoading(true);
@@ -212,6 +261,7 @@ const CustomerPortal = () => {
       phone: customerProfile?.phone || "",
       address: customerProfile?.address || "",
       city: customerProfile?.city || "",
+      country: customerProfile?.country || "",
       postal_code: customerProfile?.postal_code || "",
     });
     setIsEditingProfile(true);
@@ -387,8 +437,19 @@ const CustomerPortal = () => {
               <p className="text-blue-200">Customer Portal</p>
             </div>
             <div className="flex items-center gap-3">
-              <button className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg flex items-center gap-2 transition">
+              <button
+                onClick={() => {
+                  markAllRead();
+                  setActiveTab("tracking");
+                }}
+                className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg flex items-center gap-2 transition relative"
+              >
                 <FaBell />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
                 <span className="hidden md:inline">Notifications</span>
               </button>
               <button
@@ -980,7 +1041,8 @@ const CustomerPortal = () => {
                           </div>
                         </div>
 
-                        {(booking.status === 'delivered' || booking.status === 'completed') && (
+                        {(booking.status === "delivered" ||
+                          booking.status === "completed") && (
                           <div className="mt-3">
                             <button
                               onClick={() => setReviewBooking(booking)}
@@ -988,6 +1050,43 @@ const CustomerPortal = () => {
                             >
                               ⭐ Rate Your Experience
                             </button>
+                          </div>
+                        )}
+
+                        {booking.payment_status !== "paid" &&
+                          Number(booking.balance_amount ?? (Number(booking.total_amount) - Number(booking.paid_amount || 0))) > 0 && (
+                            <div className="mt-3 flex items-center justify-between bg-orange-50 border border-orange-200 rounded-lg px-4 py-3">
+                              <div>
+                                <p className="text-sm text-gray-600">
+                                  Outstanding Balance
+                                </p>
+                                <p className="font-bold text-orange-700">
+                                  $
+                                  {Number(
+                                    booking.balance_amount ?? (Number(booking.total_amount) - Number(booking.paid_amount || 0)),
+                                  ).toLocaleString()}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() =>
+                                  setPaymentItem({
+                                    booking_id: booking.id,
+                                    amount: booking.balance_amount ?? (Number(booking.total_amount) - Number(booking.paid_amount || 0)),
+                                    reference:
+                                      booking.booking_reference || booking.id,
+                                    description: `Booking ${booking.booking_reference || booking.id}`,
+                                  })
+                                }
+                                className="btn-primary px-5 py-2 rounded-lg font-semibold flex items-center gap-2"
+                              >
+                                <FaCreditCard /> Pay Now
+                              </button>
+                            </div>
+                          )}
+                        {booking.payment_status === "paid" && (
+                          <div className="mt-3 flex items-center bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+                            <FaCheckCircle className="text-green-600 mr-2" />
+                            <p className="text-sm text-green-700 font-medium">Payment Complete</p>
                           </div>
                         )}
                       </div>
@@ -1084,9 +1183,7 @@ const CustomerPortal = () => {
                             <div className="flex gap-2">
                               <button
                                 className="btn-outline px-4 py-2 text-sm flex items-center gap-2"
-                                onClick={() => {
-                                  /* View details */
-                                }}
+                                onClick={() => setSelectedQuote(quote)}
                               >
                                 <FaEye />
                                 View Details
@@ -1168,9 +1265,17 @@ const CustomerPortal = () => {
                 <div className="space-y-6">
                   {/* Booking Selection */}
                   <div className="border-b pb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                      Select Shipment to Track
-                    </h3>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Select Shipment to Track
+                      </h3>
+                      <button
+                        onClick={refreshShipments}
+                        className="text-xs text-blue-500 hover:text-blue-700 flex items-center gap-1 px-2 py-1 border border-blue-200 rounded hover:bg-blue-50 transition"
+                      >
+                        🔄 Refresh
+                      </button>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {bookings.map((booking) => (
                         <div
@@ -1201,12 +1306,37 @@ const CustomerPortal = () => {
                             </span>
                           </div>
                           <p className="text-sm text-gray-600 mb-1">
-                            {booking.vehicle_make} {booking.vehicle_model} (
-                            {booking.vehicle_year})
+                            {booking.vehicle?.make || booking.vehicle_make}{" "}
+                            {booking.vehicle?.model || booking.vehicle_model}
+                            {booking.vehicle?.year || booking.vehicle_year
+                              ? ` (${booking.vehicle?.year || booking.vehicle_year})`
+                              : ""}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {booking.origin_city} → {booking.destination_city}
+                            {booking.route?.origin_country ||
+                              booking.origin_city ||
+                              "—"}{" "}
+                            →{" "}
+                            {booking.route?.destination_country ||
+                              booking.destination_city ||
+                              "—"}
                           </p>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const trackingNum =
+                                booking.shipment?.tracking_number ||
+                                booking.booking_reference;
+                              navigator.clipboard.writeText(trackingNum);
+                              showAlert.success(
+                                "Copied!",
+                                `${booking.shipment?.tracking_number ? "Tracking" : "Booking"} number copied to clipboard.`,
+                              );
+                            }}
+                            className="mt-2 text-xs text-blue-500 hover:text-blue-700 flex items-center gap-1"
+                          >
+                            📋 Copy tracking number
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -1220,18 +1350,42 @@ const CustomerPortal = () => {
                         <div className="flex items-center justify-between">
                           <div>
                             <h3 className="text-xl font-bold mb-2">
-                              {selectedBooking.vehicle_make}{" "}
-                              {selectedBooking.vehicle_model} (
-                              {selectedBooking.vehicle_year})
+                              {selectedBooking.vehicle?.make ||
+                                selectedBooking.vehicle_make}{" "}
+                              {selectedBooking.vehicle?.model ||
+                                selectedBooking.vehicle_model}
+                              {selectedBooking.vehicle?.year ||
+                              selectedBooking.vehicle_year
+                                ? ` (${selectedBooking.vehicle?.year || selectedBooking.vehicle_year})`
+                                : ""}
                             </h3>
                             <p className="text-blue-100 mb-1">
                               Booking: {selectedBooking.booking_reference}
                             </p>
                             <p className="text-blue-100">
-                              {selectedBooking.origin_city},{" "}
-                              {selectedBooking.origin_country} →{" "}
-                              {selectedBooking.destination_city}
+                              {selectedBooking.route?.origin_country ||
+                                selectedBooking.origin_city ||
+                                "—"}{" "}
+                              →{" "}
+                              {selectedBooking.route?.destination_country ||
+                                selectedBooking.destination_city ||
+                                "—"}
                             </p>
+                            <button
+                              onClick={() => {
+                                const trackingNum =
+                                  selectedBooking.shipment?.tracking_number ||
+                                  selectedBooking.booking_reference;
+                                navigator.clipboard.writeText(trackingNum);
+                                showAlert.success(
+                                  "Copied!",
+                                  `${selectedBooking.shipment?.tracking_number ? "Tracking" : "Booking"} number copied to clipboard.`,
+                                );
+                              }}
+                              className="mt-2 text-xs bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-full inline-flex items-center gap-1 transition"
+                            >
+                              📋 Copy tracking number
+                            </button>
                           </div>
                           <div className="text-right">
                             <div className="text-2xl font-bold">
@@ -1280,14 +1434,17 @@ const CustomerPortal = () => {
                               booking={selectedBooking}
                               shipment={
                                 shipments.find(
-                                  (s) => s.id === selectedBooking.id,
+                                  (s) =>
+                                    s.booking_reference ===
+                                      selectedBooking.booking_reference ||
+                                    s.id === selectedBooking.id,
                                 )?.shipment
                               }
                             />
                           ) : (
                             <TrackingTimeline
-                              shipmentId={selectedBooking.id}
-                              isPublic={false}
+                              trackingNumber={selectedBooking.booking_reference}
+                              isPublic={true}
                             />
                           )}
                         </div>
@@ -1299,15 +1456,24 @@ const CustomerPortal = () => {
                           Quick Actions
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <button className="flex items-center justify-center gap-2 p-3 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 transition">
+                          <button
+                            onClick={() => setActiveTab("documents")}
+                            className="flex items-center justify-center gap-2 p-3 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 transition"
+                          >
                             <FaFileDownload />
                             Download Documents
                           </button>
-                          <button className="flex items-center justify-center gap-2 p-3 border border-green-200 text-green-600 rounded-lg hover:bg-green-50 transition">
+                          <button
+                            onClick={() => setActiveTrackingView("timeline")}
+                            className="flex items-center justify-center gap-2 p-3 border border-green-200 text-green-600 rounded-lg hover:bg-green-50 transition"
+                          >
                             <FaBell />
-                            Set Notifications
+                            View Timeline
                           </button>
-                          <button className="flex items-center justify-center gap-2 p-3 border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-50 transition">
+                          <button
+                            onClick={() => setActiveTrackingView("timeline")}
+                            className="flex items-center justify-center gap-2 p-3 border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-50 transition"
+                          >
                             <FaHistory />
                             View History
                           </button>
@@ -1548,7 +1714,7 @@ const CustomerPortal = () => {
                 </div>
                 <div className="bg-green-50 rounded-lg p-4">
                   <div className="text-2xl font-bold text-green-600">
-                    {payments.filter((p) => p.status === "paid").length}
+                    {payments.filter((p) => p.status === "completed").length}
                   </div>
                   <div className="text-green-800 text-sm">
                     Completed Payments
@@ -1575,13 +1741,57 @@ const CustomerPortal = () => {
               ) : !Array.isArray(payments) || payments.length === 0 ? (
                 <div className="text-center py-8">
                   <FaMoneyBillWave className="text-gray-300 text-6xl mx-auto mb-4" />
-                  <p className="text-gray-600">
-                    No payment information available.
+                  <p className="text-gray-600 font-medium">
+                    No payment records yet.
                   </p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    Payment details will appear here when you have active
-                    bookings.
+                  <p className="text-sm text-gray-500 mt-2 max-w-md mx-auto">
+                    Once your booking is confirmed and an invoice is issued by
+                    our team, your payment details and Pay Now button will
+                    appear here.
                   </p>
+                  {Array.isArray(bookings) &&
+                    bookings.some(
+                      (b) =>
+                        b.payment_status !== "paid" &&
+                        Number(b.balance_amount ?? (Number(b.total_amount) - Number(b.paid_amount || 0))) > 0,
+                    ) && (
+                      <div className="mt-6 inline-block bg-orange-50 border border-orange-200 rounded-lg px-6 py-4">
+                        <p className="text-sm font-medium text-orange-700 mb-3">
+                          You have unpaid bookings:
+                        </p>
+                        {bookings
+                          .filter(
+                            (b) =>
+                              b.payment_status !== "paid" &&
+                              Number(b.balance_amount ?? (Number(b.total_amount) - Number(b.paid_amount || 0))) > 0,
+                          )
+                          .map((booking) => (
+                            <div
+                              key={booking.id}
+                              className="flex items-center gap-4 mb-2"
+                            >
+                              <span className="text-sm text-gray-700">
+                                {booking.booking_reference} — $
+                                {Number(booking.balance_amount ?? (Number(booking.total_amount) - Number(booking.paid_amount || 0))).toLocaleString()}
+                              </span>
+                              <button
+                                onClick={() =>
+                                  setPaymentItem({
+                                    booking_id: booking.id,
+                                    amount: booking.balance_amount ?? (Number(booking.total_amount) - Number(booking.paid_amount || 0)),
+                                    reference:
+                                      booking.booking_reference || booking.id,
+                                    description: `Booking ${booking.booking_reference || booking.id}`,
+                                  })
+                                }
+                                className="btn-primary px-4 py-1.5 text-sm rounded-lg flex items-center gap-1"
+                              >
+                                <FaCreditCard /> Pay Now
+                              </button>
+                            </div>
+                          ))}
+                      </div>
+                    )}
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1593,11 +1803,13 @@ const CustomerPortal = () => {
                     <div
                       key={payment.id}
                       className={`border-l-4 p-6 rounded ${
-                        payment.status === "paid"
+                        payment.status === "completed"
                           ? "border-green-500 bg-green-50"
-                          : payment.status === "partial"
-                            ? "border-yellow-500 bg-yellow-50"
-                            : "border-orange-500 bg-orange-50"
+                          : payment.status === "cancelled" || payment.status === "failed"
+                            ? "border-red-500 bg-red-50"
+                            : payment.status === "refunded"
+                              ? "border-gray-500 bg-gray-50"
+                              : "border-orange-500 bg-orange-50"
                       }`}
                     >
                       <div className="flex justify-between items-center">
@@ -1629,8 +1841,19 @@ const CustomerPortal = () => {
                           >
                             {payment.status?.toUpperCase() || "PENDING"}
                           </span>
-                          {payment.status !== "paid" && (
-                            <button className="btn-primary px-6 py-2 mt-2 block">
+                          {payment.status === "pending" && (
+                            <button
+                              className="btn-primary px-6 py-2 mt-2 block"
+                              onClick={() =>
+                                setPaymentItem({
+                                  booking_id: payment.booking_id,
+                                  amount: payment.amount,
+                                  reference: payment.id || payment.booking_id,
+                                  description:
+                                    payment.description || "Shipment Payment",
+                                })
+                              }
+                            >
                               Pay Now
                             </button>
                           )}
@@ -1641,11 +1864,11 @@ const CustomerPortal = () => {
                 </div>
               )}
 
-              {/* Booking Payments */}
+              {/* Booking Payment Summary */}
               {Array.isArray(bookings) && bookings.length > 0 && (
                 <div className="mt-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Booking Payments
+                    Booking Payment Summary
                   </h3>
                   <div className="space-y-4">
                     {bookings.map((booking) => (
@@ -1662,8 +1885,8 @@ const CustomerPortal = () => {
                         <div className="flex justify-between items-center">
                           <div>
                             <p className="font-bold text-lg mb-1">
-                              {booking.vehicle_make} {booking.vehicle_model} (
-                              {booking.vehicle_year})
+                              {booking.vehicle?.make || booking.vehicle_make} {booking.vehicle?.model || booking.vehicle_model}{" "}
+                              {(booking.vehicle?.year || booking.vehicle_year) ? `(${booking.vehicle?.year || booking.vehicle_year})` : ""}
                             </p>
                             <p className="text-sm text-gray-600">
                               Booking: {booking.booking_reference}
@@ -1672,12 +1895,22 @@ const CustomerPortal = () => {
                               Created:{" "}
                               {customerService.formatDate(booking.created_at)}
                             </p>
+                            {booking.payment_status === "paid" && (
+                              <p className="text-sm text-green-600 font-medium mt-1">
+                                ✓ Fully paid
+                              </p>
+                            )}
+                            {booking.payment_status === "partial" && (
+                              <p className="text-sm text-yellow-600 font-medium mt-1">
+                                Paid: ${customerService.formatCurrency(booking.paid_amount)} of ${customerService.formatCurrency(booking.total_amount)}
+                              </p>
+                            )}
                           </div>
                           <div className="text-right">
                             <p className="text-2xl font-bold">
                               $
                               {customerService.formatCurrency(
-                                booking.total_amount,
+                                booking.payment_status === "paid" ? booking.total_amount : (booking.balance_amount ?? (Number(booking.total_amount) - Number(booking.paid_amount || 0))),
                               )}
                             </p>
                             <span
@@ -1685,11 +1918,21 @@ const CustomerPortal = () => {
                                 booking.payment_status,
                               )}`}
                             >
-                              {booking.payment_status?.toUpperCase() ||
-                                "PENDING"}
+                              {booking.payment_status === "paid" ? "PAID" : booking.payment_status === "partial" ? "PARTIAL" : "UNPAID"}
                             </span>
-                            {booking.payment_status !== "paid" && (
-                              <button className="btn-primary px-6 py-2 mt-2 block">
+                            {booking.payment_status !== "paid" && Number(booking.balance_amount ?? (Number(booking.total_amount) - Number(booking.paid_amount || 0))) > 0 && (
+                              <button
+                                className="btn-primary px-6 py-2 mt-2 block"
+                                onClick={() =>
+                                  setPaymentItem({
+                                    booking_id: booking.id,
+                                    amount: booking.balance_amount ?? (Number(booking.total_amount) - Number(booking.paid_amount || 0)),
+                                    reference:
+                                      booking.booking_reference || booking.id,
+                                    description: `Booking ${booking.booking_reference || booking.id}`,
+                                  })
+                                }
+                              >
                                 Pay Now
                               </button>
                             )}
@@ -1711,6 +1954,295 @@ const CustomerPortal = () => {
           </div>
         )}
       </div>
+
+      {/* Quote Detail Modal */}
+      {selectedQuote && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-5">
+                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                  <FaQuoteLeft className="text-blue-600" /> Quote Details
+                </h2>
+                <button
+                  onClick={() => setSelectedQuote(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FaTimes />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-center bg-blue-50 rounded-lg p-4">
+                  <div>
+                    <p className="text-sm text-gray-500">Reference</p>
+                    <p className="font-bold text-blue-700">
+                      {selectedQuote.quote_reference}
+                    </p>
+                  </div>
+                  <span
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${customerService.getStatusColor(selectedQuote.status)}`}
+                  >
+                    {selectedQuote.status?.toUpperCase()}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500">Vehicle</p>
+                    <p className="font-semibold">
+                      {selectedQuote.vehicle_details?.make}{" "}
+                      {selectedQuote.vehicle_details?.model}{" "}
+                      {selectedQuote.vehicle_details?.year
+                        ? `(${selectedQuote.vehicle_details.year})`
+                        : ""}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Vehicle Type</p>
+                    <p className="font-semibold capitalize">
+                      {selectedQuote.vehicle_details?.type || "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Origin</p>
+                    <p className="font-semibold">
+                      {selectedQuote.route?.origin_city},{" "}
+                      {selectedQuote.route?.origin_country}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Destination</p>
+                    <p className="font-semibold">
+                      {selectedQuote.route?.destination_city},{" "}
+                      {selectedQuote.route?.destination_country}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Shipping Method</p>
+                    <p className="font-semibold capitalize">
+                      {selectedQuote.shipping_method || "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Valid Until</p>
+                    <p className="font-semibold">
+                      {new Date(selectedQuote.valid_until).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Created</p>
+                    <p className="font-semibold">
+                      {new Date(selectedQuote.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Total Amount</p>
+                    <p className="font-bold text-2xl text-blue-600">
+                      $
+                      {Number(selectedQuote.total_amount || 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+
+                {selectedQuote.notes && (
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">Notes</p>
+                    <p className="text-sm bg-gray-50 rounded-lg p-3">
+                      {selectedQuote.notes}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                {selectedQuote.status === "approved" && (
+                  <button
+                    className="btn-primary flex-1 py-2 rounded-lg font-semibold flex items-center justify-center gap-2"
+                    onClick={() => {
+                      confirmQuote(selectedQuote.id);
+                      setSelectedQuote(null);
+                    }}
+                  >
+                    <FaCheck /> Confirm Booking
+                  </button>
+                )}
+                <button
+                  onClick={() => setSelectedQuote(null)}
+                  className="btn-outline flex-1 py-2 rounded-lg"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      {paymentItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                  <FaCreditCard className="text-blue-600" /> Submit Payment
+                </h2>
+                <button
+                  onClick={() => { setPaymentItem(null); setPaymentMethod('bank_transfer'); setTransactionRef(''); setPaymentNotes(''); }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FaTimes />
+                </button>
+              </div>
+
+              <div className="bg-blue-50 rounded-lg p-4 mb-4">
+                <p className="text-sm text-gray-600 mb-1">Amount Due</p>
+                <p className="text-3xl font-bold text-blue-700">
+                  ${customerService.formatCurrency(paymentItem.amount)}
+                </p>
+                <p className="text-sm text-gray-500 mt-1">{paymentItem.description}</p>
+              </div>
+
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Payment Method</label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                    required
+                  >
+                    <option value="" disabled>Select payment method...</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="mobile_money">Mobile Money</option>
+                    <option value="cash">Cash</option>
+                    <option value="credit_card">Credit Card</option>
+                  </select>
+                </div>
+
+                {paymentMethod === 'bank_transfer' && (
+                  <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-2">
+                    <p className="font-semibold text-gray-700 mb-1">Bank Details:</p>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Bank:</span>
+                      <span className="font-medium">Glowie Logistics Bank</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Account:</span>
+                      <span className="font-medium">ShipWithGlowie Ltd</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Account No:</span>
+                      <span className="font-medium">1234-5678-9012</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Reference:</span>
+                      <span className="font-medium text-blue-600">REF-{paymentItem.reference}</span>
+                    </div>
+                  </div>
+                )}
+
+                {paymentMethod === 'mobile_money' && (
+                  <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-2">
+                    <p className="font-semibold text-gray-700 mb-1">Mobile Money Details:</p>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Provider:</span>
+                      <span className="font-medium">MTN Mobile Money</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Number:</span>
+                      <span className="font-medium">+256 700 123 456</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Name:</span>
+                      <span className="font-medium">ShipWithGlowie Ltd</span>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Transaction Reference *
+                  </label>
+                  <input
+                    type="text"
+                    value={transactionRef}
+                    onChange={(e) => setTransactionRef(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 bg-gray-50"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Auto-generated from booking reference. You can append your bank receipt number.</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Notes (optional)</label>
+                  <textarea
+                    value={paymentNotes}
+                    onChange={(e) => setPaymentNotes(e.target.value)}
+                    rows={2}
+                    placeholder="Any additional payment details..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 resize-none"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={async () => {
+                  if (!paymentMethod) {
+                    showAlert('warning', 'Required', 'Please select a payment method.');
+                    return;
+                  }
+                  if (!transactionRef.trim()) {
+                    showAlert('warning', 'Required', 'Please enter your transaction reference or receipt number.');
+                    return;
+                  }
+                  try {
+                    setSubmittingPayment(true);
+                    await customerService.submitCustomerPayment({
+                      booking_id: paymentItem.booking_id,
+                      amount: paymentItem.amount,
+                      payment_method: paymentMethod,
+                      transaction_id: transactionRef.trim(),
+                      notes: paymentNotes.trim() || undefined,
+                    });
+                    setPaymentItem(null);
+                    setPaymentMethod('');
+                    setTransactionRef('');
+                    setPaymentNotes('');
+                    showAlert('success', 'Payment Submitted!', 'Your payment has been submitted and is awaiting verification. Our team will confirm within 24 hours.');
+                    // Refresh payments and bookings data
+                    try {
+                      const [paymentsRes, bookingsRes] = await Promise.all([
+                        customerService.getCustomerPayments(),
+                        customerService.getCustomerBookings(),
+                      ]);
+                      setPayments(paymentsRes?.data || []);
+                      const freshBookings = bookingsRes?.data?.data || bookingsRes?.data || [];
+                      setBookings(Array.isArray(freshBookings) ? freshBookings : []);
+                    } catch {}
+                  } catch (err) {
+                    const msg = err.response?.data?.message || 'Failed to submit payment. Please try again.';
+                    showAlert('error', 'Payment Failed', msg);
+                  } finally {
+                    setSubmittingPayment(false);
+                  }
+                }}
+                disabled={submittingPayment}
+                className="btn-primary w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {submittingPayment ? (
+                  <><FaSpinner className="animate-spin" /> Submitting...</>
+                ) : (
+                  <><FaCreditCard /> Submit Payment</>
+                )}
+              </button>
+              <p className="text-xs text-gray-500 text-center mt-3">
+                Your payment will be verified by our team within 24 hours.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Review Modal */}
       {reviewBooking && (

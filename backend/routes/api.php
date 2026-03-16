@@ -181,6 +181,7 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->prefix('admin')->group(fun
         Route::post('/process-expired', [QuoteController::class, 'processExpiredQuotes']);
         Route::get('/{id}', [QuoteController::class, 'show']);
         Route::put('/{id}', [QuoteController::class, 'update']);
+        Route::delete('/{id}', [QuoteController::class, 'destroy']);
         Route::patch('/{id}/approve', [QuoteController::class, 'approve']);
         Route::patch('/{id}/reject', [QuoteController::class, 'reject']);
         Route::post('/{id}/convert', [QuoteController::class, 'convertToBooking']);
@@ -210,23 +211,23 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->prefix('admin')->group(fun
     Route::prefix('crud/payments')->group(function () {
         Route::get('/', [PaymentController::class, 'index']);
         Route::post('/', [PaymentController::class, 'store']);
-        Route::get('/{id}', [PaymentController::class, 'show']);
-        Route::put('/{id}', [PaymentController::class, 'update']);
-        Route::delete('/{id}', [PaymentController::class, 'destroy']);
-        Route::patch('/{id}/complete', [PaymentController::class, 'complete']);
-        Route::post('/{id}/refund', [PaymentController::class, 'refund']);
+        Route::get('/statistics', [PaymentController::class, 'statistics']);
+        Route::get('/revenue-analytics', [PaymentController::class, 'revenueAnalytics']);
         Route::get('/requires-attention', [PaymentController::class, 'requiresAttention']);
         Route::get('/overdue', [PaymentController::class, 'overdue']);
         Route::post('/process-overdue', [PaymentController::class, 'processOverdue']);
-        Route::get('/statistics', [PaymentController::class, 'statistics']);
-        Route::get('/revenue-analytics', [PaymentController::class, 'revenueAnalytics']);
         Route::post('/calculate-fees', [PaymentController::class, 'calculateFees']);
-        Route::get('/{id}/instructions', [PaymentController::class, 'instructions']);
         Route::get('/search', [PaymentController::class, 'search']);
         Route::get('/recent', [PaymentController::class, 'recent']);
         Route::get('/booking/{bookingId}', [PaymentController::class, 'byBooking']);
         Route::get('/customer/{customerId}', [PaymentController::class, 'byCustomer']);
         Route::post('/export', [PaymentController::class, 'export']);
+        Route::get('/{id}', [PaymentController::class, 'show']);
+        Route::put('/{id}', [PaymentController::class, 'update']);
+        Route::delete('/{id}', [PaymentController::class, 'destroy']);
+        Route::patch('/{id}/complete', [PaymentController::class, 'complete']);
+        Route::post('/{id}/refund', [PaymentController::class, 'refund']);
+        Route::get('/{id}/instructions', [PaymentController::class, 'instructions']);
     });
     
     // Legacy Dashboard (keeping for backward compatibility)
@@ -252,12 +253,7 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->prefix('admin')->group(fun
     Route::prefix('crud/shipments')->group(function () {
         Route::get('/', [TrackingController::class, 'index']);
         Route::post('/', [TrackingController::class, 'store']);
-        Route::get('/{id}', [TrackingController::class, 'show']);
-        Route::put('/{id}', [TrackingController::class, 'update']);
-        Route::delete('/{id}', [TrackingController::class, 'destroy']);
-        Route::patch('/{id}/status', [TrackingController::class, 'updateStatus']);
-        Route::patch('/{id}/estimated-arrival', [TrackingController::class, 'updateEstimatedArrival']);
-        Route::get('/track/{trackingNumber}', [TrackingController::class, 'track']);
+        // Named routes MUST come before {id} wildcard routes
         Route::get('/requires-attention', [TrackingController::class, 'requiresAttention']);
         Route::get('/statistics', [TrackingController::class, 'statistics']);
         Route::post('/process-delayed', [TrackingController::class, 'processDelayed']);
@@ -266,13 +262,18 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->prefix('admin')->group(fun
         Route::get('/search', [TrackingController::class, 'search']);
         Route::get('/recent', [TrackingController::class, 'recent']);
         Route::get('/trends', [TrackingController::class, 'trends']);
-        
-        // Map Tracking Endpoints
-        Route::get('/{id}/map', [TrackingController::class, 'getTrackingMap']);
         Route::get('/live-tracking', [TrackingController::class, 'getLiveTrackingData']);
-        Route::patch('/{id}/location', [TrackingController::class, 'updateLocation']);
         Route::post('/route', [TrackingController::class, 'getRoute']);
         Route::post('/geocode', [TrackingController::class, 'geocodeLocation']);
+        // Wildcard {id} routes must come last
+        Route::get('/{id}', [TrackingController::class, 'show']);
+        Route::put('/{id}', [TrackingController::class, 'update']);
+        Route::delete('/{id}', [TrackingController::class, 'destroy']);
+        Route::patch('/{id}/status', [TrackingController::class, 'updateStatus']);
+        Route::patch('/{id}/estimated-arrival', [TrackingController::class, 'updateEstimatedArrival']);
+        Route::get('/track/{trackingNumber}', [TrackingController::class, 'track']);
+        Route::get('/{id}/map', [TrackingController::class, 'getTrackingMap']);
+        Route::patch('/{id}/location', [TrackingController::class, 'updateLocation']);
     });
     
     // Finance

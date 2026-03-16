@@ -76,7 +76,8 @@ abstract class BaseRepository implements BaseRepositoryInterface
      */
     public function update(int $id, array $data): bool
     {
-        return $this->model->where('id', $id)->update($data);
+        $record = $this->model->findOrFail($id);
+        return $record->update($data);
     }
 
     /**
@@ -98,12 +99,14 @@ abstract class BaseRepository implements BaseRepositoryInterface
     /**
      * Get filtered and paginated results
      */
-    public function getFilteredPaginated(array $filters = [], int $perPage = 15): LengthAwarePaginator
+    public function getFilteredPaginated(array $filters = [], int $perPage = 15, array $with = [], string $sortBy = 'created_at', string $sortOrder = 'desc'): LengthAwarePaginator
     {
         $query = $this->model->newQuery();
+        if (!empty($with)) {
+            $query->with($with);
+        }
         $query = $this->applyFilters($query, $filters);
-        
-        return $query->paginate($perPage);
+        return $query->orderBy($sortBy, $sortOrder)->paginate($perPage);
     }
 
     /**
