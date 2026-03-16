@@ -21,7 +21,10 @@ const QuoteCreateModal = ({ onClose, onSave, editingQuote = null }) => {
       const vd = editingQuote.vehicle_details || {};
       return {
         customer_name:
-          editingQuote.customer_name || editingQuote.customer?.full_name || editingQuote.customer?.name || "",
+          editingQuote.customer_name ||
+          editingQuote.customer?.full_name ||
+          editingQuote.customer?.name ||
+          "",
         customer_email:
           editingQuote.customer_email || editingQuote.customer?.email || "",
         customer_phone:
@@ -154,25 +157,28 @@ const QuoteCreateModal = ({ onClose, onSave, editingQuote = null }) => {
         special_requirements: formData.special_requirements,
 
         // Default status
-        status: isEditMode ? (editingQuote.status || "pending") : "pending",
+        status: isEditMode ? editingQuote.status || "pending" : "pending",
       };
 
       if (isEditMode) {
         // Remove empty strings to avoid validation issues on optional fields
         const cleanData = Object.fromEntries(
-          Object.entries(quoteData).filter(([_, v]) => v !== '' && v !== null && v !== undefined)
+          Object.entries(quoteData).filter(
+            ([_, v]) => v !== "" && v !== null && v !== undefined,
+          ),
         );
         await updateQuote(editingQuote.id, cleanData);
-        await showAlert('Success', 'Quote updated successfully', 'success');
+        await showAlert("Success", "Quote updated successfully", "success");
       } else {
         await createQuote(quoteData);
-        await showAlert('Success', 'Quote created successfully', 'success');
+        await showAlert("Success", "Quote created successfully", "success");
       }
       onSave();
     } catch (error) {
       console.error(isEditMode ? "Update failed:" : "Create failed:", error);
       const errorMessage =
-        error.response?.data?.message || (isEditMode ? "Failed to update quote" : "Failed to create quote");
+        error.response?.data?.message ||
+        (isEditMode ? "Failed to update quote" : "Failed to create quote");
       await showAlert("Error", errorMessage, "error");
     } finally {
       setLoading(false);
@@ -204,13 +210,19 @@ const QuoteCreateModal = ({ onClose, onSave, editingQuote = null }) => {
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-800">
           <div className="flex items-center gap-4">
-            {isEditMode ? <FaEdit className="text-blue-500 text-2xl" /> : <FaPlus className="text-blue-500 text-2xl" />}
+            {isEditMode ? (
+              <FaEdit className="text-blue-500 text-2xl" />
+            ) : (
+              <FaPlus className="text-blue-500 text-2xl" />
+            )}
             <div>
               <h2 className="text-2xl font-bold text-white">
-                {isEditMode ? 'Edit Quote' : 'Create New Quote'}
+                {isEditMode ? "Edit Quote" : "Create New Quote"}
               </h2>
               <p className="text-gray-400">
-                {isEditMode ? `Editing quote ${editingQuote.quote_reference || `Q-${editingQuote.id}`}` : 'Generate a shipping quote for a customer'}
+                {isEditMode
+                  ? `Editing quote ${editingQuote.quote_reference || `Q-${editingQuote.id}`}`
+                  : "Generate a shipping quote for a customer"}
               </p>
             </div>
           </div>
@@ -250,7 +262,8 @@ const QuoteCreateModal = ({ onClose, onSave, editingQuote = null }) => {
               <div className="space-y-4">
                 {isEditMode && (
                   <div className="bg-blue-900/20 border border-blue-800 rounded-lg p-3 text-blue-300 text-sm">
-                    Customer info is linked to the customer record and cannot be changed here.
+                    Customer info is linked to the customer record and cannot be
+                    changed here.
                   </div>
                 )}
                 <div className="grid md:grid-cols-2 gap-4">
@@ -265,7 +278,7 @@ const QuoteCreateModal = ({ onClose, onSave, editingQuote = null }) => {
                       onChange={handleInputChange}
                       required
                       disabled={isEditMode}
-                      className={`w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 ${isEditMode ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      className={`w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 ${isEditMode ? "opacity-60 cursor-not-allowed" : ""}`}
                       placeholder="Enter customer full name"
                     />
                   </div>
@@ -281,7 +294,7 @@ const QuoteCreateModal = ({ onClose, onSave, editingQuote = null }) => {
                       onChange={handleInputChange}
                       required
                       disabled={isEditMode}
-                      className={`w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 ${isEditMode ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      className={`w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 ${isEditMode ? "opacity-60 cursor-not-allowed" : ""}`}
                       placeholder="customer@example.com"
                     />
                   </div>
@@ -297,7 +310,7 @@ const QuoteCreateModal = ({ onClose, onSave, editingQuote = null }) => {
                     value={formData.customer_phone}
                     onChange={handleInputChange}
                     disabled={isEditMode}
-                    className={`w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 ${isEditMode ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    className={`w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 ${isEditMode ? "opacity-60 cursor-not-allowed" : ""}`}
                     placeholder="+256 700 000 000"
                   />
                 </div>
@@ -660,12 +673,12 @@ const QuoteCreateModal = ({ onClose, onSave, editingQuote = null }) => {
               {loading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  {isEditMode ? 'Updating...' : 'Creating...'}
+                  {isEditMode ? "Updating..." : "Creating..."}
                 </>
               ) : (
                 <>
                   {isEditMode ? <FaEdit /> : <FaPlus />}
-                  {isEditMode ? 'Update Quote' : 'Create Quote'}
+                  {isEditMode ? "Update Quote" : "Create Quote"}
                 </>
               )}
             </button>

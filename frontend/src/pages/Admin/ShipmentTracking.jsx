@@ -1,31 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  FaShip, 
-  FaMapMarkerAlt, 
-  FaClock, 
-  FaCheckCircle, 
-  FaExclamationCircle, 
+import React, { useState, useEffect } from "react";
+import {
+  FaShip,
+  FaMapMarkerAlt,
+  FaClock,
+  FaCheckCircle,
+  FaExclamationCircle,
   FaSpinner,
   FaSearch,
   FaEye,
   FaEdit,
   FaTrash,
   FaSyncAlt,
-  FaTruck
-} from 'react-icons/fa';
-import { 
-  getShipments, 
-  getShipment, 
+  FaTruck,
+} from "react-icons/fa";
+import {
+  getShipments,
+  getShipment,
   getShipmentStatistics,
   getShipmentsRequiringAttention,
   updateShipmentStatus,
   deleteShipment,
-  searchShipments
-} from '../../services/adminService';
-import DropdownMenu from '../../components/UI/DropdownMenu';
-import ShipmentViewModal from '../../components/Admin/ShipmentViewModal';
-import ShipmentEditModal from '../../components/Admin/ShipmentEditModal';
-import { showAlert, showConfirm } from '../../utils/sweetAlert';
+  searchShipments,
+} from "../../services/adminService";
+import DropdownMenu from "../../components/UI/DropdownMenu";
+import ShipmentViewModal from "../../components/Admin/ShipmentViewModal";
+import ShipmentEditModal from "../../components/Admin/ShipmentEditModal";
+import { showAlert, showConfirm } from "../../utils/sweetAlert";
 
 const ShipmentTracking = () => {
   const [shipments, setShipments] = useState([]);
@@ -33,11 +33,11 @@ const ShipmentTracking = () => {
   const [statistics, setStatistics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [carrierFilter, setCarrierFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [carrierFilter, setCarrierFilter] = useState("all");
   const [showRequiringAttention, setShowRequiringAttention] = useState(false);
-  
+
   // Modal states
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -49,23 +49,31 @@ const ShipmentTracking = () => {
 
   useEffect(() => {
     filterShipments();
-  }, [shipments, searchTerm, statusFilter, carrierFilter, showRequiringAttention]);
+  }, [
+    shipments,
+    searchTerm,
+    statusFilter,
+    carrierFilter,
+    showRequiringAttention,
+  ]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const [shipmentsResponse, statsResponse] = await Promise.all([
         getShipments(),
-        getShipmentStatistics().catch(() => null)
+        getShipmentStatistics().catch(() => null),
       ]);
-      
+
       const shipmentsData = shipmentsResponse.data || shipmentsResponse || [];
       setShipments(shipmentsData);
       setStatistics(statsResponse?.data || null);
       setError(null);
     } catch (err) {
-      console.error('Failed to fetch tracking data:', err);
-      setError('Failed to load tracking data. Please ensure you are logged in as Admin.');
+      console.error("Failed to fetch tracking data:", err);
+      setError(
+        "Failed to load tracking data. Please ensure you are logged in as Admin.",
+      );
       setShipments([]);
     } finally {
       setLoading(false);
@@ -82,31 +90,46 @@ const ShipmentTracking = () => {
         const attentionData = attentionResponse.data || attentionResponse || [];
         filtered = attentionData;
       } catch (err) {
-        console.error('Failed to fetch shipments requiring attention:', err);
+        console.error("Failed to fetch shipments requiring attention:", err);
       }
     }
 
     // Search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(shipment => 
-        (shipment.tracking_number || '').toLowerCase().includes(term) ||
-        (shipment.booking?.customer?.full_name || shipment.booking?.customer?.name || '').toLowerCase().includes(term) ||
-        (shipment.booking?.vehicle?.make || '').toLowerCase().includes(term) ||
-        (shipment.booking?.vehicle?.model || '').toLowerCase().includes(term) ||
-        (shipment.carrier_name || '').toLowerCase().includes(term) ||
-        (shipment.current_location || '').toLowerCase().includes(term)
+      filtered = filtered.filter(
+        (shipment) =>
+          (shipment.tracking_number || "").toLowerCase().includes(term) ||
+          (
+            shipment.booking?.customer?.full_name ||
+            shipment.booking?.customer?.name ||
+            ""
+          )
+            .toLowerCase()
+            .includes(term) ||
+          (shipment.booking?.vehicle?.make || "")
+            .toLowerCase()
+            .includes(term) ||
+          (shipment.booking?.vehicle?.model || "")
+            .toLowerCase()
+            .includes(term) ||
+          (shipment.carrier_name || "").toLowerCase().includes(term) ||
+          (shipment.current_location || "").toLowerCase().includes(term),
       );
     }
 
     // Status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(shipment => shipment.status === statusFilter);
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(
+        (shipment) => shipment.status === statusFilter,
+      );
     }
 
     // Carrier filter
-    if (carrierFilter !== 'all') {
-      filtered = filtered.filter(shipment => shipment.carrier_name === carrierFilter);
+    if (carrierFilter !== "all") {
+      filtered = filtered.filter(
+        (shipment) => shipment.carrier_name === carrierFilter,
+      );
     }
 
     setFilteredShipments(filtered);
@@ -119,7 +142,7 @@ const ShipmentTracking = () => {
         const searchResults = response.data || response || [];
         setFilteredShipments(searchResults);
       } catch (err) {
-        console.error('Search failed:', err);
+        console.error("Search failed:", err);
       }
     } else {
       filterShipments();
@@ -138,19 +161,19 @@ const ShipmentTracking = () => {
 
   const handleDelete = async (shipment) => {
     const confirmed = await showConfirm(
-      'Delete Shipment',
+      "Delete Shipment",
       `Are you sure you want to delete shipment ${shipment.tracking_number}?`,
-      'warning'
+      "warning",
     );
 
     if (confirmed) {
       try {
         await deleteShipment(shipment.id);
-        await showAlert('Success', 'Shipment deleted successfully', 'success');
+        await showAlert("Success", "Shipment deleted successfully", "success");
         fetchData();
       } catch (error) {
-        console.error('Delete failed:', error);
-        await showAlert('Error', 'Failed to delete shipment', 'error');
+        console.error("Delete failed:", error);
+        await showAlert("Error", "Failed to delete shipment", "error");
       }
     }
   };
@@ -158,28 +181,69 @@ const ShipmentTracking = () => {
   const handleStatusUpdate = async (shipment, newStatus) => {
     try {
       await updateShipmentStatus(shipment.id, newStatus);
-      await showAlert('Success', 'Shipment status updated successfully', 'success');
+      await showAlert(
+        "Success",
+        "Shipment status updated successfully",
+        "success",
+      );
       fetchData();
     } catch (error) {
-      console.error('Status update failed:', error);
-      await showAlert('Error', 'Failed to update shipment status', 'error');
+      console.error("Status update failed:", error);
+      await showAlert("Error", "Failed to update shipment status", "error");
     }
   };
 
   const getStatusBadge = (status) => {
     const config = {
-      pending: { bg: 'bg-yellow-900/30', text: 'text-yellow-400', label: 'Pending', icon: FaClock },
-      confirmed: { bg: 'bg-blue-900/30', text: 'text-blue-400', label: 'Confirmed', icon: FaCheckCircle },
-      in_transit: { bg: 'bg-purple-900/30', text: 'text-purple-400', label: 'In Transit', icon: FaTruck },
-      on_route: { bg: 'bg-blue-900/30', text: 'text-blue-400', label: 'On Route', icon: FaShip },
-      customs: { bg: 'bg-orange-900/30', text: 'text-orange-400', label: 'At Customs', icon: FaAnchor },
-      delivered: { bg: 'bg-green-900/30', text: 'text-green-400', label: 'Delivered', icon: FaCheckCircle },
-      delayed: { bg: 'bg-red-900/30', text: 'text-red-400', label: 'Delayed', icon: FaExclamationCircle }
+      pending: {
+        bg: "bg-yellow-900/30",
+        text: "text-yellow-400",
+        label: "Pending",
+        icon: FaClock,
+      },
+      confirmed: {
+        bg: "bg-blue-900/30",
+        text: "text-blue-400",
+        label: "Confirmed",
+        icon: FaCheckCircle,
+      },
+      in_transit: {
+        bg: "bg-purple-900/30",
+        text: "text-purple-400",
+        label: "In Transit",
+        icon: FaTruck,
+      },
+      on_route: {
+        bg: "bg-blue-900/30",
+        text: "text-blue-400",
+        label: "On Route",
+        icon: FaShip,
+      },
+      customs: {
+        bg: "bg-orange-900/30",
+        text: "text-orange-400",
+        label: "At Customs",
+        icon: FaAnchor,
+      },
+      delivered: {
+        bg: "bg-green-900/30",
+        text: "text-green-400",
+        label: "Delivered",
+        icon: FaCheckCircle,
+      },
+      delayed: {
+        bg: "bg-red-900/30",
+        text: "text-red-400",
+        label: "Delayed",
+        icon: FaExclamationCircle,
+      },
     };
     const c = config[status] || config.pending;
     const IconComponent = c.icon;
     return (
-      <span className={`${c.bg} ${c.text} px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1`}>
+      <span
+        className={`${c.bg} ${c.text} px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1`}
+      >
         <IconComponent className="text-xs" />
         {c.label}
       </span>
@@ -187,13 +251,15 @@ const ShipmentTracking = () => {
   };
 
   const getProgressColor = (percentage) => {
-    if (percentage >= 80) return 'bg-green-500';
-    if (percentage >= 50) return 'bg-blue-500';
-    if (percentage >= 25) return 'bg-yellow-500';
-    return 'bg-red-500';
+    if (percentage >= 80) return "bg-green-500";
+    if (percentage >= 50) return "bg-blue-500";
+    if (percentage >= 25) return "bg-yellow-500";
+    return "bg-red-500";
   };
 
-  const uniqueCarriers = [...new Set(shipments.map(s => s.carrier_name).filter(Boolean))];
+  const uniqueCarriers = [
+    ...new Set(shipments.map((s) => s.carrier_name).filter(Boolean)),
+  ];
 
   if (loading) {
     return (
@@ -206,8 +272,12 @@ const ShipmentTracking = () => {
   return (
     <div className="max-w-[calc(100vw-2rem)] mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Shipment Tracking</h1>
-        <p className="text-gray-400">Real-time tracking and management of all shipments</p>
+        <h1 className="text-3xl font-bold text-white mb-2">
+          Shipment Tracking
+        </h1>
+        <p className="text-gray-400">
+          Real-time tracking and management of all shipments
+        </p>
       </div>
 
       {/* Statistics Cards */}
@@ -217,7 +287,9 @@ const ShipmentTracking = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Total Shipments</p>
-                <p className="text-2xl font-bold text-white">{statistics.total_shipments || 0}</p>
+                <p className="text-2xl font-bold text-white">
+                  {statistics.total_shipments || 0}
+                </p>
               </div>
               <FaShip className="text-blue-500 text-2xl" />
             </div>
@@ -226,7 +298,9 @@ const ShipmentTracking = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">In Transit</p>
-                <p className="text-2xl font-bold text-white">{statistics.in_transit || 0}</p>
+                <p className="text-2xl font-bold text-white">
+                  {statistics.in_transit || 0}
+                </p>
               </div>
               <FaTruck className="text-purple-500 text-2xl" />
             </div>
@@ -235,7 +309,9 @@ const ShipmentTracking = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Delivered</p>
-                <p className="text-2xl font-bold text-white">{statistics.delivered || 0}</p>
+                <p className="text-2xl font-bold text-white">
+                  {statistics.delivered || 0}
+                </p>
               </div>
               <FaCheckCircle className="text-green-500 text-2xl" />
             </div>
@@ -244,7 +320,9 @@ const ShipmentTracking = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Requiring Attention</p>
-                <p className="text-2xl font-bold text-white">{statistics.requires_attention || 0}</p>
+                <p className="text-2xl font-bold text-white">
+                  {statistics.requires_attention || 0}
+                </p>
               </div>
               <FaExclamationCircle className="text-red-500 text-2xl" />
             </div>
@@ -295,8 +373,10 @@ const ShipmentTracking = () => {
               className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
             >
               <option value="all">All Carriers</option>
-              {uniqueCarriers.map(carrier => (
-                <option key={carrier} value={carrier}>{carrier}</option>
+              {uniqueCarriers.map((carrier) => (
+                <option key={carrier} value={carrier}>
+                  {carrier}
+                </option>
               ))}
             </select>
 
@@ -304,8 +384,8 @@ const ShipmentTracking = () => {
               onClick={() => setShowRequiringAttention(!showRequiringAttention)}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 showRequiringAttention
-                  ? 'bg-red-600 text-white'
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  ? "bg-red-600 text-white"
+                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
               }`}
             >
               <FaExclamationCircle className="inline mr-2" />
@@ -359,43 +439,55 @@ const ShipmentTracking = () => {
               <tbody className="divide-y divide-gray-800">
                 {filteredShipments.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center text-gray-400">
+                    <td
+                      colSpan="7"
+                      className="px-6 py-12 text-center text-gray-400"
+                    >
                       No shipments found
                     </td>
                   </tr>
                 ) : (
                   filteredShipments.map((shipment) => (
-                    <tr key={shipment.id} className="hover:bg-gray-800/30 transition-colors">
+                    <tr
+                      key={shipment.id}
+                      className="hover:bg-gray-800/30 transition-colors"
+                    >
                       <td className="px-6 py-4">
                         <div>
                           <p className="text-blue-400 font-semibold">
                             {shipment.tracking_number || `SWG-${shipment.id}`}
                           </p>
                           <p className="text-gray-400 text-sm">
-                            {shipment.carrier_name || 'N/A'}
+                            {shipment.carrier_name || "N/A"}
                           </p>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div>
                           <p className="text-white font-medium">
-                            {shipment.booking?.customer?.full_name || shipment.booking?.customer?.name || 'N/A'}
+                            {shipment.booking?.customer?.full_name ||
+                              shipment.booking?.customer?.name ||
+                              "N/A"}
                           </p>
                           <p className="text-gray-400 text-sm">
-                            {shipment.booking?.vehicle 
+                            {shipment.booking?.vehicle
                               ? `${shipment.booking.vehicle.make} ${shipment.booking.vehicle.model} ${shipment.booking.vehicle.year}`
-                              : 'N/A'}
+                              : "N/A"}
                           </p>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2 text-sm">
-                          <span className="text-gray-300">{shipment.departure_port || 'N/A'}</span>
+                          <span className="text-gray-300">
+                            {shipment.departure_port || "N/A"}
+                          </span>
                           <span className="text-gray-500">→</span>
-                          <span className="text-gray-300">{shipment.arrival_port || 'N/A'}</span>
+                          <span className="text-gray-300">
+                            {shipment.arrival_port || "N/A"}
+                          </span>
                         </div>
                         <p className="text-gray-400 text-xs mt-1">
-                          Current: {shipment.current_location || 'N/A'}
+                          Current: {shipment.current_location || "N/A"}
                         </p>
                       </td>
                       <td className="px-6 py-4">
@@ -409,7 +501,9 @@ const ShipmentTracking = () => {
                           <div className="w-full bg-gray-700 rounded-full h-2">
                             <div
                               className={`h-2 rounded-full transition-all ${getProgressColor(shipment.progress_percentage || 0)}`}
-                              style={{ width: `${shipment.progress_percentage || 0}%` }}
+                              style={{
+                                width: `${shipment.progress_percentage || 0}%`,
+                              }}
                             ></div>
                           </div>
                         </div>
@@ -420,9 +514,11 @@ const ShipmentTracking = () => {
                       <td className="px-6 py-4">
                         <div>
                           <p className="text-white text-sm">
-                            {shipment.estimated_arrival 
-                              ? new Date(shipment.estimated_arrival).toLocaleDateString()
-                              : 'N/A'}
+                            {shipment.estimated_arrival
+                              ? new Date(
+                                  shipment.estimated_arrival,
+                                ).toLocaleDateString()
+                              : "N/A"}
                           </p>
                           {shipment.is_delayed && (
                             <p className="text-red-400 text-xs">
@@ -440,32 +536,52 @@ const ShipmentTracking = () => {
                           }
                           items={[
                             {
-                              label: 'View Details',
+                              label: "View Details",
                               icon: FaEye,
-                              onClick: () => handleView(shipment)
+                              onClick: () => handleView(shipment),
                             },
                             {
-                              label: 'Edit Shipment',
+                              label: "Edit Shipment",
                               icon: FaEdit,
-                              onClick: () => handleEdit(shipment)
+                              onClick: () => handleEdit(shipment),
                             },
                             {
-                              label: 'Update Status',
+                              label: "Update Status",
                               icon: FaCheckCircle,
                               submenu: [
-                                { label: 'Confirmed', onClick: () => handleStatusUpdate(shipment, 'confirmed') },
-                                { label: 'In Transit', onClick: () => handleStatusUpdate(shipment, 'in_transit') },
-                                { label: 'On Route', onClick: () => handleStatusUpdate(shipment, 'on_route') },
-                                { label: 'At Customs', onClick: () => handleStatusUpdate(shipment, 'customs') },
-                                { label: 'Delivered', onClick: () => handleStatusUpdate(shipment, 'delivered') }
-                              ]
+                                {
+                                  label: "Confirmed",
+                                  onClick: () =>
+                                    handleStatusUpdate(shipment, "confirmed"),
+                                },
+                                {
+                                  label: "In Transit",
+                                  onClick: () =>
+                                    handleStatusUpdate(shipment, "in_transit"),
+                                },
+                                {
+                                  label: "On Route",
+                                  onClick: () =>
+                                    handleStatusUpdate(shipment, "on_route"),
+                                },
+                                {
+                                  label: "At Customs",
+                                  onClick: () =>
+                                    handleStatusUpdate(shipment, "customs"),
+                                },
+                                {
+                                  label: "Delivered",
+                                  onClick: () =>
+                                    handleStatusUpdate(shipment, "delivered"),
+                                },
+                              ],
                             },
                             {
-                              label: 'Delete',
+                              label: "Delete",
                               icon: FaTrash,
                               onClick: () => handleDelete(shipment),
-                              className: 'text-red-400 hover:text-red-300'
-                            }
+                              className: "text-red-400 hover:text-red-300",
+                            },
                           ]}
                         />
                       </td>

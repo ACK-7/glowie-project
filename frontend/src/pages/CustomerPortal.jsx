@@ -55,9 +55,9 @@ const CustomerPortal = () => {
   });
   const [reviewBooking, setReviewBooking] = useState(null);
   const [paymentItem, setPaymentItem] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
-  const [transactionRef, setTransactionRef] = useState('');
-  const [paymentNotes, setPaymentNotes] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
+  const [transactionRef, setTransactionRef] = useState("");
+  const [paymentNotes, setPaymentNotes] = useState("");
   const [submittingPayment, setSubmittingPayment] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
 
@@ -65,8 +65,8 @@ const CustomerPortal = () => {
   useEffect(() => {
     if (paymentItem) {
       setTransactionRef(`REF-${paymentItem.reference}`);
-      setPaymentMethod('');
-      setPaymentNotes('');
+      setPaymentMethod("");
+      setPaymentNotes("");
     }
   }, [paymentItem]);
   const { customer, isAuthenticated, logout } = useCustomerAuth();
@@ -91,12 +91,24 @@ const CustomerPortal = () => {
   const refreshShipments = async () => {
     try {
       const shipmentsData = await customerService.getCustomerShipments();
-      const fresh = Array.isArray(shipmentsData.data) ? shipmentsData.data : Array.isArray(shipmentsData) ? shipmentsData : [];
+      const fresh = Array.isArray(shipmentsData.data)
+        ? shipmentsData.data
+        : Array.isArray(shipmentsData)
+          ? shipmentsData
+          : [];
       setShipments(fresh);
       // Also refresh selected booking's shipment reference
       if (selectedBooking) {
-        const updated = fresh.find(s => s.booking_reference === selectedBooking.booking_reference || s.id === selectedBooking.id);
-        if (updated) setSelectedBooking(prev => ({ ...prev, shipment: updated.shipment }));
+        const updated = fresh.find(
+          (s) =>
+            s.booking_reference === selectedBooking.booking_reference ||
+            s.id === selectedBooking.id,
+        );
+        if (updated)
+          setSelectedBooking((prev) => ({
+            ...prev,
+            shipment: updated.shipment,
+          }));
       }
     } catch (err) {
       console.error("Shipment refresh error:", err);
@@ -1054,7 +1066,11 @@ const CustomerPortal = () => {
                         )}
 
                         {booking.payment_status !== "paid" &&
-                          Number(booking.balance_amount ?? (Number(booking.total_amount) - Number(booking.paid_amount || 0))) > 0 && (
+                          Number(
+                            booking.balance_amount ??
+                              Number(booking.total_amount) -
+                                Number(booking.paid_amount || 0),
+                          ) > 0 && (
                             <div className="mt-3 flex items-center justify-between bg-orange-50 border border-orange-200 rounded-lg px-4 py-3">
                               <div>
                                 <p className="text-sm text-gray-600">
@@ -1063,7 +1079,9 @@ const CustomerPortal = () => {
                                 <p className="font-bold text-orange-700">
                                   $
                                   {Number(
-                                    booking.balance_amount ?? (Number(booking.total_amount) - Number(booking.paid_amount || 0)),
+                                    booking.balance_amount ??
+                                      Number(booking.total_amount) -
+                                        Number(booking.paid_amount || 0),
                                   ).toLocaleString()}
                                 </p>
                               </div>
@@ -1071,7 +1089,10 @@ const CustomerPortal = () => {
                                 onClick={() =>
                                   setPaymentItem({
                                     booking_id: booking.id,
-                                    amount: booking.balance_amount ?? (Number(booking.total_amount) - Number(booking.paid_amount || 0)),
+                                    amount:
+                                      booking.balance_amount ??
+                                      Number(booking.total_amount) -
+                                        Number(booking.paid_amount || 0),
                                     reference:
                                       booking.booking_reference || booking.id,
                                     description: `Booking ${booking.booking_reference || booking.id}`,
@@ -1086,7 +1107,9 @@ const CustomerPortal = () => {
                         {booking.payment_status === "paid" && (
                           <div className="mt-3 flex items-center bg-green-50 border border-green-200 rounded-lg px-4 py-3">
                             <FaCheckCircle className="text-green-600 mr-2" />
-                            <p className="text-sm text-green-700 font-medium">Payment Complete</p>
+                            <p className="text-sm text-green-700 font-medium">
+                              Payment Complete
+                            </p>
                           </div>
                         )}
                       </div>
@@ -1753,7 +1776,10 @@ const CustomerPortal = () => {
                     bookings.some(
                       (b) =>
                         b.payment_status !== "paid" &&
-                        Number(b.balance_amount ?? (Number(b.total_amount) - Number(b.paid_amount || 0))) > 0,
+                        Number(
+                          b.balance_amount ??
+                            Number(b.total_amount) - Number(b.paid_amount || 0),
+                        ) > 0,
                     ) && (
                       <div className="mt-6 inline-block bg-orange-50 border border-orange-200 rounded-lg px-6 py-4">
                         <p className="text-sm font-medium text-orange-700 mb-3">
@@ -1763,7 +1789,11 @@ const CustomerPortal = () => {
                           .filter(
                             (b) =>
                               b.payment_status !== "paid" &&
-                              Number(b.balance_amount ?? (Number(b.total_amount) - Number(b.paid_amount || 0))) > 0,
+                              Number(
+                                b.balance_amount ??
+                                  Number(b.total_amount) -
+                                    Number(b.paid_amount || 0),
+                              ) > 0,
                           )
                           .map((booking) => (
                             <div
@@ -1772,13 +1802,20 @@ const CustomerPortal = () => {
                             >
                               <span className="text-sm text-gray-700">
                                 {booking.booking_reference} — $
-                                {Number(booking.balance_amount ?? (Number(booking.total_amount) - Number(booking.paid_amount || 0))).toLocaleString()}
+                                {Number(
+                                  booking.balance_amount ??
+                                    Number(booking.total_amount) -
+                                      Number(booking.paid_amount || 0),
+                                ).toLocaleString()}
                               </span>
                               <button
                                 onClick={() =>
                                   setPaymentItem({
                                     booking_id: booking.id,
-                                    amount: booking.balance_amount ?? (Number(booking.total_amount) - Number(booking.paid_amount || 0)),
+                                    amount:
+                                      booking.balance_amount ??
+                                      Number(booking.total_amount) -
+                                        Number(booking.paid_amount || 0),
                                     reference:
                                       booking.booking_reference || booking.id,
                                     description: `Booking ${booking.booking_reference || booking.id}`,
@@ -1805,7 +1842,8 @@ const CustomerPortal = () => {
                       className={`border-l-4 p-6 rounded ${
                         payment.status === "completed"
                           ? "border-green-500 bg-green-50"
-                          : payment.status === "cancelled" || payment.status === "failed"
+                          : payment.status === "cancelled" ||
+                              payment.status === "failed"
                             ? "border-red-500 bg-red-50"
                             : payment.status === "refunded"
                               ? "border-gray-500 bg-gray-50"
@@ -1885,8 +1923,11 @@ const CustomerPortal = () => {
                         <div className="flex justify-between items-center">
                           <div>
                             <p className="font-bold text-lg mb-1">
-                              {booking.vehicle?.make || booking.vehicle_make} {booking.vehicle?.model || booking.vehicle_model}{" "}
-                              {(booking.vehicle?.year || booking.vehicle_year) ? `(${booking.vehicle?.year || booking.vehicle_year})` : ""}
+                              {booking.vehicle?.make || booking.vehicle_make}{" "}
+                              {booking.vehicle?.model || booking.vehicle_model}{" "}
+                              {booking.vehicle?.year || booking.vehicle_year
+                                ? `(${booking.vehicle?.year || booking.vehicle_year})`
+                                : ""}
                             </p>
                             <p className="text-sm text-gray-600">
                               Booking: {booking.booking_reference}
@@ -1902,7 +1943,14 @@ const CustomerPortal = () => {
                             )}
                             {booking.payment_status === "partial" && (
                               <p className="text-sm text-yellow-600 font-medium mt-1">
-                                Paid: ${customerService.formatCurrency(booking.paid_amount)} of ${customerService.formatCurrency(booking.total_amount)}
+                                Paid: $
+                                {customerService.formatCurrency(
+                                  booking.paid_amount,
+                                )}{" "}
+                                of $
+                                {customerService.formatCurrency(
+                                  booking.total_amount,
+                                )}
                               </p>
                             )}
                           </div>
@@ -1910,7 +1958,11 @@ const CustomerPortal = () => {
                             <p className="text-2xl font-bold">
                               $
                               {customerService.formatCurrency(
-                                booking.payment_status === "paid" ? booking.total_amount : (booking.balance_amount ?? (Number(booking.total_amount) - Number(booking.paid_amount || 0))),
+                                booking.payment_status === "paid"
+                                  ? booking.total_amount
+                                  : (booking.balance_amount ??
+                                      Number(booking.total_amount) -
+                                        Number(booking.paid_amount || 0)),
                               )}
                             </p>
                             <span
@@ -1918,24 +1970,36 @@ const CustomerPortal = () => {
                                 booking.payment_status,
                               )}`}
                             >
-                              {booking.payment_status === "paid" ? "PAID" : booking.payment_status === "partial" ? "PARTIAL" : "UNPAID"}
+                              {booking.payment_status === "paid"
+                                ? "PAID"
+                                : booking.payment_status === "partial"
+                                  ? "PARTIAL"
+                                  : "UNPAID"}
                             </span>
-                            {booking.payment_status !== "paid" && Number(booking.balance_amount ?? (Number(booking.total_amount) - Number(booking.paid_amount || 0))) > 0 && (
-                              <button
-                                className="btn-primary px-6 py-2 mt-2 block"
-                                onClick={() =>
-                                  setPaymentItem({
-                                    booking_id: booking.id,
-                                    amount: booking.balance_amount ?? (Number(booking.total_amount) - Number(booking.paid_amount || 0)),
-                                    reference:
-                                      booking.booking_reference || booking.id,
-                                    description: `Booking ${booking.booking_reference || booking.id}`,
-                                  })
-                                }
-                              >
-                                Pay Now
-                              </button>
-                            )}
+                            {booking.payment_status !== "paid" &&
+                              Number(
+                                booking.balance_amount ??
+                                  Number(booking.total_amount) -
+                                    Number(booking.paid_amount || 0),
+                              ) > 0 && (
+                                <button
+                                  className="btn-primary px-6 py-2 mt-2 block"
+                                  onClick={() =>
+                                    setPaymentItem({
+                                      booking_id: booking.id,
+                                      amount:
+                                        booking.balance_amount ??
+                                        Number(booking.total_amount) -
+                                          Number(booking.paid_amount || 0),
+                                      reference:
+                                        booking.booking_reference || booking.id,
+                                      description: `Booking ${booking.booking_reference || booking.id}`,
+                                    })
+                                  }
+                                >
+                                  Pay Now
+                                </button>
+                              )}
                           </div>
                         </div>
                       </div>
@@ -2089,7 +2153,12 @@ const CustomerPortal = () => {
                   <FaCreditCard className="text-blue-600" /> Submit Payment
                 </h2>
                 <button
-                  onClick={() => { setPaymentItem(null); setPaymentMethod('bank_transfer'); setTransactionRef(''); setPaymentNotes(''); }}
+                  onClick={() => {
+                    setPaymentItem(null);
+                    setPaymentMethod("bank_transfer");
+                    setTransactionRef("");
+                    setPaymentNotes("");
+                  }}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <FaTimes />
@@ -2101,19 +2170,25 @@ const CustomerPortal = () => {
                 <p className="text-3xl font-bold text-blue-700">
                   ${customerService.formatCurrency(paymentItem.amount)}
                 </p>
-                <p className="text-sm text-gray-500 mt-1">{paymentItem.description}</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {paymentItem.description}
+                </p>
               </div>
 
               <div className="space-y-4 mb-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Payment Method</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Payment Method
+                  </label>
                   <select
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
                     required
                   >
-                    <option value="" disabled>Select payment method...</option>
+                    <option value="" disabled>
+                      Select payment method...
+                    </option>
                     <option value="bank_transfer">Bank Transfer</option>
                     <option value="mobile_money">Mobile Money</option>
                     <option value="cash">Cash</option>
@@ -2121,9 +2196,11 @@ const CustomerPortal = () => {
                   </select>
                 </div>
 
-                {paymentMethod === 'bank_transfer' && (
+                {paymentMethod === "bank_transfer" && (
                   <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-2">
-                    <p className="font-semibold text-gray-700 mb-1">Bank Details:</p>
+                    <p className="font-semibold text-gray-700 mb-1">
+                      Bank Details:
+                    </p>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Bank:</span>
                       <span className="font-medium">Glowie Logistics Bank</span>
@@ -2138,14 +2215,18 @@ const CustomerPortal = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Reference:</span>
-                      <span className="font-medium text-blue-600">REF-{paymentItem.reference}</span>
+                      <span className="font-medium text-blue-600">
+                        REF-{paymentItem.reference}
+                      </span>
                     </div>
                   </div>
                 )}
 
-                {paymentMethod === 'mobile_money' && (
+                {paymentMethod === "mobile_money" && (
                   <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-2">
-                    <p className="font-semibold text-gray-700 mb-1">Mobile Money Details:</p>
+                    <p className="font-semibold text-gray-700 mb-1">
+                      Mobile Money Details:
+                    </p>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Provider:</span>
                       <span className="font-medium">MTN Mobile Money</span>
@@ -2171,11 +2252,16 @@ const CustomerPortal = () => {
                     onChange={(e) => setTransactionRef(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 bg-gray-50"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Auto-generated from booking reference. You can append your bank receipt number.</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Auto-generated from booking reference. You can append your
+                    bank receipt number.
+                  </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Notes (optional)</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Notes (optional)
+                  </label>
                   <textarea
                     value={paymentNotes}
                     onChange={(e) => setPaymentNotes(e.target.value)}
@@ -2189,11 +2275,19 @@ const CustomerPortal = () => {
               <button
                 onClick={async () => {
                   if (!paymentMethod) {
-                    showAlert('warning', 'Required', 'Please select a payment method.');
+                    showAlert(
+                      "warning",
+                      "Required",
+                      "Please select a payment method.",
+                    );
                     return;
                   }
                   if (!transactionRef.trim()) {
-                    showAlert('warning', 'Required', 'Please enter your transaction reference or receipt number.');
+                    showAlert(
+                      "warning",
+                      "Required",
+                      "Please enter your transaction reference or receipt number.",
+                    );
                     return;
                   }
                   try {
@@ -2206,10 +2300,14 @@ const CustomerPortal = () => {
                       notes: paymentNotes.trim() || undefined,
                     });
                     setPaymentItem(null);
-                    setPaymentMethod('');
-                    setTransactionRef('');
-                    setPaymentNotes('');
-                    showAlert('success', 'Payment Submitted!', 'Your payment has been submitted and is awaiting verification. Our team will confirm within 24 hours.');
+                    setPaymentMethod("");
+                    setTransactionRef("");
+                    setPaymentNotes("");
+                    showAlert(
+                      "success",
+                      "Payment Submitted!",
+                      "Your payment has been submitted and is awaiting verification. Our team will confirm within 24 hours.",
+                    );
                     // Refresh payments and bookings data
                     try {
                       const [paymentsRes, bookingsRes] = await Promise.all([
@@ -2217,12 +2315,17 @@ const CustomerPortal = () => {
                         customerService.getCustomerBookings(),
                       ]);
                       setPayments(paymentsRes?.data || []);
-                      const freshBookings = bookingsRes?.data?.data || bookingsRes?.data || [];
-                      setBookings(Array.isArray(freshBookings) ? freshBookings : []);
+                      const freshBookings =
+                        bookingsRes?.data?.data || bookingsRes?.data || [];
+                      setBookings(
+                        Array.isArray(freshBookings) ? freshBookings : [],
+                      );
                     } catch {}
                   } catch (err) {
-                    const msg = err.response?.data?.message || 'Failed to submit payment. Please try again.';
-                    showAlert('error', 'Payment Failed', msg);
+                    const msg =
+                      err.response?.data?.message ||
+                      "Failed to submit payment. Please try again.";
+                    showAlert("error", "Payment Failed", msg);
                   } finally {
                     setSubmittingPayment(false);
                   }
@@ -2231,9 +2334,13 @@ const CustomerPortal = () => {
                 className="btn-primary w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {submittingPayment ? (
-                  <><FaSpinner className="animate-spin" /> Submitting...</>
+                  <>
+                    <FaSpinner className="animate-spin" /> Submitting...
+                  </>
                 ) : (
-                  <><FaCreditCard /> Submit Payment</>
+                  <>
+                    <FaCreditCard /> Submit Payment
+                  </>
                 )}
               </button>
               <p className="text-xs text-gray-500 text-center mt-3">

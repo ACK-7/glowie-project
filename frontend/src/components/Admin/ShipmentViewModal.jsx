@@ -142,7 +142,9 @@ const ShipmentViewModal = ({ shipment, onClose }) => {
               <p className="text-gray-400">
                 Shipment Details
                 {detailedShipment.booking?.booking_reference && (
-                  <span className="ml-2 text-gray-500">· Booking: {detailedShipment.booking.booking_reference}</span>
+                  <span className="ml-2 text-gray-500">
+                    · Booking: {detailedShipment.booking.booking_reference}
+                  </span>
                 )}
               </p>
             </div>
@@ -412,7 +414,10 @@ const ShipmentViewModal = ({ shipment, onClose }) => {
                       <div>
                         <span className="text-gray-400">Days Delayed:</span>
                         <p className="text-white font-medium">
-                          {delayInfo?.days_delayed || detailedShipment.days_delayed || 0} days
+                          {delayInfo?.days_delayed ||
+                            detailedShipment.days_delayed ||
+                            0}{" "}
+                          days
                         </p>
                       </div>
                       {delayInfo?.delay_reasons?.length > 0 && (
@@ -420,18 +425,26 @@ const ShipmentViewModal = ({ shipment, onClose }) => {
                           <span className="text-gray-400">Delay Reasons:</span>
                           <ul className="text-white mt-1">
                             {delayInfo.delay_reasons.map((reason, index) => (
-                              <li key={index} className="ml-4">• {reason}</li>
+                              <li key={index} className="ml-4">
+                                • {reason}
+                              </li>
                             ))}
                           </ul>
                         </div>
                       )}
                       {delayInfo?.suggested_actions?.length > 0 && (
                         <div>
-                          <span className="text-gray-400">Suggested Actions:</span>
+                          <span className="text-gray-400">
+                            Suggested Actions:
+                          </span>
                           <ul className="text-white mt-1">
-                            {delayInfo.suggested_actions.map((action, index) => (
-                              <li key={index} className="ml-4">• {action}</li>
-                            ))}
+                            {delayInfo.suggested_actions.map(
+                              (action, index) => (
+                                <li key={index} className="ml-4">
+                                  • {action}
+                                </li>
+                              ),
+                            )}
                           </ul>
                         </div>
                       )}
@@ -464,13 +477,34 @@ const ShipmentViewModal = ({ shipment, onClose }) => {
                   </h3>
                   <div className="flex items-center justify-between mb-8 overflow-x-auto pb-2">
                     {[
-                      { key: 'preparing', label: 'Preparing', icon: FaWarehouse },
-                      { key: 'in_transit', label: 'In Transit', icon: FaShip },
-                      { key: 'customs', label: 'At Customs', icon: FaMapMarkerAlt },
-                      { key: 'delivered', label: 'Delivered', icon: FaCheckCircle },
+                      {
+                        key: "preparing",
+                        label: "Preparing",
+                        icon: FaWarehouse,
+                      },
+                      { key: "in_transit", label: "In Transit", icon: FaShip },
+                      {
+                        key: "customs",
+                        label: "At Customs",
+                        icon: FaMapMarkerAlt,
+                      },
+                      {
+                        key: "delivered",
+                        label: "Delivered",
+                        icon: FaCheckCircle,
+                      },
                     ].map((step, idx, arr) => {
-                      const statusOrder = ['preparing', 'in_transit', 'customs', 'delivered'];
-                      const currentIdx = statusOrder.indexOf(detailedShipment.status === 'delayed' ? 'in_transit' : detailedShipment.status);
+                      const statusOrder = [
+                        "preparing",
+                        "in_transit",
+                        "customs",
+                        "delivered",
+                      ];
+                      const currentIdx = statusOrder.indexOf(
+                        detailedShipment.status === "delayed"
+                          ? "in_transit"
+                          : detailedShipment.status,
+                      );
                       const stepIdx = statusOrder.indexOf(step.key);
                       const isCompleted = stepIdx < currentIdx;
                       const isActive = stepIdx === currentIdx;
@@ -478,24 +512,41 @@ const ShipmentViewModal = ({ shipment, onClose }) => {
                       return (
                         <React.Fragment key={step.key}>
                           <div className="flex flex-col items-center min-w-[80px]">
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all ${
-                              isCompleted ? 'bg-green-600 border-green-500' :
-                              isActive ? 'bg-blue-600 border-blue-400 ring-4 ring-blue-900/50' :
-                              'bg-gray-700 border-gray-600'
-                            }`}>
-                              <Icon className={`text-lg ${isCompleted || isActive ? 'text-white' : 'text-gray-400'}`} />
+                            <div
+                              className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all ${
+                                isCompleted
+                                  ? "bg-green-600 border-green-500"
+                                  : isActive
+                                    ? "bg-blue-600 border-blue-400 ring-4 ring-blue-900/50"
+                                    : "bg-gray-700 border-gray-600"
+                              }`}
+                            >
+                              <Icon
+                                className={`text-lg ${isCompleted || isActive ? "text-white" : "text-gray-400"}`}
+                              />
                             </div>
-                            <p className={`text-xs mt-2 font-medium text-center ${
-                              isCompleted ? 'text-green-400' :
-                              isActive ? 'text-blue-400' :
-                              'text-gray-500'
-                            }`}>{step.label}</p>
-                            {isActive && detailedShipment.status === 'delayed' && (
-                              <span className="text-xs text-red-400 mt-1">Delayed</span>
-                            )}
+                            <p
+                              className={`text-xs mt-2 font-medium text-center ${
+                                isCompleted
+                                  ? "text-green-400"
+                                  : isActive
+                                    ? "text-blue-400"
+                                    : "text-gray-500"
+                              }`}
+                            >
+                              {step.label}
+                            </p>
+                            {isActive &&
+                              detailedShipment.status === "delayed" && (
+                                <span className="text-xs text-red-400 mt-1">
+                                  Delayed
+                                </span>
+                              )}
                           </div>
                           {idx < arr.length - 1 && (
-                            <div className={`flex-1 h-1 mx-2 rounded ${stepIdx < currentIdx ? 'bg-green-600' : 'bg-gray-700'}`} />
+                            <div
+                              className={`flex-1 h-1 mx-2 rounded ${stepIdx < currentIdx ? "bg-green-600" : "bg-gray-700"}`}
+                            />
                           )}
                         </React.Fragment>
                       );
@@ -515,32 +566,42 @@ const ShipmentViewModal = ({ shipment, onClose }) => {
                       <div className="space-y-6">
                         {[...trackingHistory].reverse().map((event, index) => {
                           const statusColors = {
-                            created: 'bg-gray-600',
-                            preparing: 'bg-yellow-600',
-                            in_transit: 'bg-blue-600',
-                            customs: 'bg-orange-600',
-                            delivered: 'bg-green-600',
-                            delayed: 'bg-red-600',
+                            created: "bg-gray-600",
+                            preparing: "bg-yellow-600",
+                            in_transit: "bg-blue-600",
+                            customs: "bg-orange-600",
+                            delivered: "bg-green-600",
+                            delayed: "bg-red-600",
                           };
-                          const dotColor = statusColors[event.status] || 'bg-blue-600';
+                          const dotColor =
+                            statusColors[event.status] || "bg-blue-600";
                           const statusLabels = {
-                            created: 'Shipment Created',
-                            preparing: 'Preparing for Departure',
-                            in_transit: 'In Transit',
-                            customs: 'Arrived at Customs',
-                            delivered: 'Delivered',
-                            delayed: 'Delay Reported',
+                            created: "Shipment Created",
+                            preparing: "Preparing for Departure",
+                            in_transit: "In Transit",
+                            customs: "Arrived at Customs",
+                            delivered: "Delivered",
+                            delayed: "Delay Reported",
                           };
                           return (
-                            <div key={index} className="flex gap-4 pl-10 relative">
-                              <div className={`absolute left-2.5 top-1 w-3 h-3 rounded-full ${dotColor} ring-2 ring-gray-800`}></div>
+                            <div
+                              key={index}
+                              className="flex gap-4 pl-10 relative"
+                            >
+                              <div
+                                className={`absolute left-2.5 top-1 w-3 h-3 rounded-full ${dotColor} ring-2 ring-gray-800`}
+                              ></div>
                               <div className="flex-1 bg-gray-700/30 rounded-lg p-4">
                                 <div className="flex items-start justify-between gap-2">
                                   <p className="text-white font-medium">
-                                    {statusLabels[event.status] || event.status || 'Status Update'}
+                                    {statusLabels[event.status] ||
+                                      event.status ||
+                                      "Status Update"}
                                   </p>
                                   <span className="text-gray-500 text-xs whitespace-nowrap">
-                                    {formatDate(event.timestamp || event.created_at)}
+                                    {formatDate(
+                                      event.timestamp || event.created_at,
+                                    )}
                                   </span>
                                 </div>
                                 {event.location && (
@@ -550,7 +611,9 @@ const ShipmentViewModal = ({ shipment, onClose }) => {
                                   </p>
                                 )}
                                 {event.notes && (
-                                  <p className="text-gray-400 text-sm mt-1">{event.notes}</p>
+                                  <p className="text-gray-400 text-sm mt-1">
+                                    {event.notes}
+                                  </p>
                                 )}
                               </div>
                             </div>
@@ -562,7 +625,9 @@ const ShipmentViewModal = ({ shipment, onClose }) => {
                 ) : (
                   <div className="bg-gray-800/30 rounded-xl p-6 text-center">
                     <FaClock className="text-gray-400 text-4xl mx-auto mb-4" />
-                    <p className="text-gray-400">No tracking events recorded yet</p>
+                    <p className="text-gray-400">
+                      No tracking events recorded yet
+                    </p>
                   </div>
                 )}
               </div>

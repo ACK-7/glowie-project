@@ -175,7 +175,10 @@ const ShipmentManagement = () => {
           shipment.current_location
             ?.toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
-          (shipment.booking?.customer?.full_name || shipment.booking?.customer?.name)
+          (
+            shipment.booking?.customer?.full_name ||
+            shipment.booking?.customer?.name
+          )
             ?.toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
           shipment.booking?.customer?.email
@@ -227,14 +230,18 @@ const ShipmentManagement = () => {
   const handleUpdateStatus = async (shipment, newStatus) => {
     const confirmed = await showConfirm(
       "Update Status",
-      `Change shipment ${shipment.tracking_number} status to ${newStatus.replace('_', ' ')}?`,
+      `Change shipment ${shipment.tracking_number} status to ${newStatus.replace("_", " ")}?`,
       "question",
     );
 
     if (confirmed) {
       try {
         await updateShipmentStatus(shipment.id, newStatus);
-        await showAlert("Success", "Shipment status updated successfully", "success");
+        await showAlert(
+          "Success",
+          "Shipment status updated successfully",
+          "success",
+        );
         fetchData();
       } catch (error) {
         console.error("Update status failed:", error);
@@ -263,7 +270,7 @@ const ShipmentManagement = () => {
   const handleUpdateLocation = async (shipment) => {
     const location = window.prompt(
       `Update current location for ${shipment.tracking_number || `#${shipment.id}`}:`,
-      shipment.current_location || ''
+      shipment.current_location || "",
     );
     if (location === null) return; // cancelled
     try {
@@ -278,41 +285,61 @@ const ShipmentManagement = () => {
   const getDropdownItems = (shipment) => {
     const items = [
       {
-        label: 'View Details',
+        label: "View Details",
         icon: <FaEye className="w-4 h-4" />,
         onClick: () => handleViewShipment(shipment),
       },
       {
-        label: 'Edit Shipment',
+        label: "Edit Shipment",
         icon: <FaEdit className="w-4 h-4" />,
         onClick: () => handleEditShipment(shipment),
       },
       {
-        label: 'Update Location',
+        label: "Update Location",
         icon: <FaLocationArrow className="w-4 h-4" />,
         onClick: () => handleUpdateLocation(shipment),
       },
     ];
 
     // Status transitions
-    if (shipment.status === 'preparing') {
-      items.push({ label: 'Set In Transit', icon: <FaTruck className="w-4 h-4" />, onClick: () => handleUpdateStatus(shipment, 'in_transit') });
+    if (shipment.status === "preparing") {
+      items.push({
+        label: "Set In Transit",
+        icon: <FaTruck className="w-4 h-4" />,
+        onClick: () => handleUpdateStatus(shipment, "in_transit"),
+      });
     }
-    if (shipment.status === 'in_transit') {
-      items.push({ label: 'At Customs', icon: <FaMapMarkerAlt className="w-4 h-4" />, onClick: () => handleUpdateStatus(shipment, 'customs') });
+    if (shipment.status === "in_transit") {
+      items.push({
+        label: "At Customs",
+        icon: <FaMapMarkerAlt className="w-4 h-4" />,
+        onClick: () => handleUpdateStatus(shipment, "customs"),
+      });
     }
-    if (shipment.status === 'customs' || shipment.status === 'in_transit') {
-      items.push({ label: 'Mark Delivered', icon: <FaCheckCircle className="w-4 h-4" />, onClick: () => handleUpdateStatus(shipment, 'delivered') });
+    if (shipment.status === "customs" || shipment.status === "in_transit") {
+      items.push({
+        label: "Mark Delivered",
+        icon: <FaCheckCircle className="w-4 h-4" />,
+        onClick: () => handleUpdateStatus(shipment, "delivered"),
+      });
     }
-    if (shipment.status !== 'delayed' && shipment.status !== 'delivered') {
-      items.push({ label: 'Mark Delayed', icon: <FaExclamationTriangle className="w-4 h-4" />, onClick: () => handleUpdateStatus(shipment, 'delayed') });
+    if (shipment.status !== "delayed" && shipment.status !== "delivered") {
+      items.push({
+        label: "Mark Delayed",
+        icon: <FaExclamationTriangle className="w-4 h-4" />,
+        onClick: () => handleUpdateStatus(shipment, "delayed"),
+      });
     }
-    if (shipment.status === 'delayed') {
-      items.push({ label: 'Resume Transit', icon: <FaTruck className="w-4 h-4" />, onClick: () => handleUpdateStatus(shipment, 'in_transit') });
+    if (shipment.status === "delayed") {
+      items.push({
+        label: "Resume Transit",
+        icon: <FaTruck className="w-4 h-4" />,
+        onClick: () => handleUpdateStatus(shipment, "in_transit"),
+      });
     }
 
     items.push({
-      label: 'Delete Shipment',
+      label: "Delete Shipment",
       icon: <FaTrash className="w-4 h-4" />,
       onClick: () => handleDeleteShipment(shipment),
       danger: true,
@@ -580,7 +607,8 @@ const ShipmentManagement = () => {
                       <td className="px-6 py-4">
                         <div>
                           <p className="text-white font-medium">
-                            {shipment.booking?.customer?.full_name || shipment.booking?.customer?.name ||
+                            {shipment.booking?.customer?.full_name ||
+                              shipment.booking?.customer?.name ||
                               (shipment.booking?.customer?.first_name &&
                               shipment.booking?.customer?.last_name
                                 ? `${shipment.booking.customer.first_name} ${shipment.booking.customer.last_name}`

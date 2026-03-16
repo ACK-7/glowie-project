@@ -35,8 +35,7 @@ import {
   getFinancialSummary,
 } from "../../services/adminService";
 import { showAlert, showConfirm } from "../../utils/sweetAlert";
-import DropdownMenu from '../../components/UI/DropdownMenu';
-
+import DropdownMenu from "../../components/UI/DropdownMenu";
 
 const FinanceDashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -99,13 +98,13 @@ const FinanceDashboard = () => {
   const [showRecordModal, setShowRecordModal] = useState(false);
   const [bookings, setBookings] = useState([]);
   const [recordForm, setRecordForm] = useState({
-    booking_id: '',
-    customer_id: '',
-    amount: '',
-    currency: 'USD',
-    payment_method: 'bank_transfer',
-    transaction_id: '',
-    notes: ''
+    booking_id: "",
+    customer_id: "",
+    amount: "",
+    currency: "USD",
+    payment_method: "bank_transfer",
+    transaction_id: "",
+    notes: "",
   });
 
   useEffect(() => {
@@ -177,8 +176,8 @@ const FinanceDashboard = () => {
       const params = {
         page: currentPage,
         per_page: perPage,
-        sort_by: 'created_at',
-        sort_order: 'desc',
+        sort_by: "created_at",
+        sort_order: "desc",
       };
 
       // Add filters to params
@@ -197,7 +196,11 @@ const FinanceDashboard = () => {
       // Update statistics - handle nested response: axios.data -> API wrapper.data -> stats
       const statsWrapper = financeStatsResponse?.data;
       const statsData = statsWrapper?.data || statsWrapper;
-      if (statsData && (statsData.total_revenue !== undefined || statsData.total_payments !== undefined)) {
+      if (
+        statsData &&
+        (statsData.total_revenue !== undefined ||
+          statsData.total_payments !== undefined)
+      ) {
         setStats([
           {
             icon: FaDollarSign,
@@ -226,7 +229,10 @@ const FinanceDashboard = () => {
           {
             icon: FaExclamationCircle,
             title: "Failed/Overdue",
-            value: ((statsData.failed_payments || 0) + (statsData.overdue_payments || 0)).toString(),
+            value: (
+              (statsData.failed_payments || 0) +
+              (statsData.overdue_payments || 0)
+            ).toString(),
             change: `${statsData.cancelled_payments || 0} cancelled`,
             changeType: "negative",
             iconBg: "bg-red-600",
@@ -243,12 +249,17 @@ const FinanceDashboard = () => {
         // paymentsResponse = { success, message, data: [...], meta: { pagination: {...} } }
         if (Array.isArray(paymentsResponse.data)) {
           paymentsData = paymentsResponse.data;
-        } else if (paymentsResponse.data?.data && Array.isArray(paymentsResponse.data.data)) {
+        } else if (
+          paymentsResponse.data?.data &&
+          Array.isArray(paymentsResponse.data.data)
+        ) {
           paymentsData = paymentsResponse.data.data;
         }
 
         // Extract pagination from meta
-        const pagination = paymentsResponse.meta?.pagination || paymentsResponse.data?.meta?.pagination;
+        const pagination =
+          paymentsResponse.meta?.pagination ||
+          paymentsResponse.data?.meta?.pagination;
         if (pagination) {
           paginationData = {
             current_page: pagination.current_page,
@@ -301,7 +312,13 @@ const FinanceDashboard = () => {
           payment.payment_reference
             ?.toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
-          (payment.booking?.customer?.full_name || payment.customer?.full_name || `${payment.booking?.customer?.first_name || ''} ${payment.booking?.customer?.last_name || ''}`.trim() || payment.customer_name || '')
+          (
+            payment.booking?.customer?.full_name ||
+            payment.customer?.full_name ||
+            `${payment.booking?.customer?.first_name || ""} ${payment.booking?.customer?.last_name || ""}`.trim() ||
+            payment.customer_name ||
+            ""
+          )
             .toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
           payment.booking?.reference_number
@@ -380,7 +397,7 @@ const FinanceDashboard = () => {
         setViewingPayment(response.data);
       }
     } catch {
-      showAlert('Error', 'Failed to load payment details', 'error');
+      showAlert("Error", "Failed to load payment details", "error");
     } finally {
       setViewLoading(false);
     }
@@ -388,105 +405,113 @@ const FinanceDashboard = () => {
 
   const handleMarkCompleted = async (payment) => {
     const confirmed = await showConfirm(
-      'Mark as Completed',
+      "Mark as Completed",
       `Mark payment ${payment.payment_reference || payment.id} as completed?`,
-      'question',
-      'Yes, Complete'
+      "question",
+      "Yes, Complete",
     );
     if (confirmed) {
       try {
-        showAlert.loading('Processing...', 'Updating payment status...');
-        await updatePaymentStatus(payment.id, 'completed');
+        showAlert.loading("Processing...", "Updating payment status...");
+        await updatePaymentStatus(payment.id, "completed");
         showAlert.close();
-        showAlert.success('Success!', 'Payment marked as completed');
+        showAlert.success("Success!", "Payment marked as completed");
         fetchFinanceData(false);
       } catch {
         showAlert.close();
-        showAlert.error('Error', 'Failed to update payment status');
+        showAlert.error("Error", "Failed to update payment status");
       }
     }
   };
 
   const handleProcessRefund = async (payment) => {
     const confirmed = await showConfirm(
-      'Process Refund',
+      "Process Refund",
       `Process refund for payment ${payment.payment_reference || payment.id} (${formatCurrency(payment.amount)})?`,
-      'warning',
-      'Yes, Refund'
+      "warning",
+      "Yes, Refund",
     );
     if (confirmed) {
       try {
-        showAlert.loading('Processing...', 'Processing refund...');
-        await processRefund(payment.id, payment.amount, 'Admin initiated refund');
+        showAlert.loading("Processing...", "Processing refund...");
+        await processRefund(
+          payment.id,
+          payment.amount,
+          "Admin initiated refund",
+        );
         showAlert.close();
-        showAlert.success('Success!', 'Refund processed successfully');
+        showAlert.success("Success!", "Refund processed successfully");
         fetchFinanceData(false);
       } catch {
         showAlert.close();
-        showAlert.error('Error', 'Failed to process refund');
+        showAlert.error("Error", "Failed to process refund");
       }
     }
   };
 
   const handleCancelPayment = async (payment) => {
     const confirmed = await showConfirm(
-      'Cancel Payment',
+      "Cancel Payment",
       `Cancel payment ${payment.payment_reference || payment.id}? This action cannot be undone.`,
-      'warning',
-      'Yes, Cancel'
+      "warning",
+      "Yes, Cancel",
     );
     if (confirmed) {
       try {
-        showAlert.loading('Processing...', 'Cancelling payment...');
-        await updatePaymentStatus(payment.id, 'cancelled', 'Cancelled by admin');
+        showAlert.loading("Processing...", "Cancelling payment...");
+        await updatePaymentStatus(
+          payment.id,
+          "cancelled",
+          "Cancelled by admin",
+        );
         showAlert.close();
-        showAlert.success('Success!', 'Payment cancelled successfully');
+        showAlert.success("Success!", "Payment cancelled successfully");
         fetchFinanceData(false);
       } catch {
         showAlert.close();
-        showAlert.error('Error', 'Failed to cancel payment');
+        showAlert.error("Error", "Failed to cancel payment");
       }
     }
   };
 
   const handleOpenRecordModal = async () => {
     try {
-      const response = await getBookings({ per_page: 100, with: 'customer' });
+      const response = await getBookings({ per_page: 100, with: "customer" });
       const bookingsData = response?.data?.data || response?.data || [];
       setBookings(bookingsData);
     } catch {
       setBookings([]);
     }
     setRecordForm({
-      booking_id: '',
-      customer_id: '',
-      amount: '',
-      currency: 'USD',
-      payment_method: 'bank_transfer',
-      transaction_id: '',
-      notes: ''
+      booking_id: "",
+      customer_id: "",
+      amount: "",
+      currency: "USD",
+      payment_method: "bank_transfer",
+      transaction_id: "",
+      notes: "",
     });
     setShowRecordModal(true);
   };
 
   const handleBookingSelect = (bookingId) => {
-    const booking = bookings.find(b => String(b.id) === String(bookingId));
-    setRecordForm(prev => ({
+    const booking = bookings.find((b) => String(b.id) === String(bookingId));
+    setRecordForm((prev) => ({
       ...prev,
       booking_id: bookingId,
-      customer_id: booking?.customer_id || booking?.customer?.id || '',
-      amount: booking?.total_amount || booking?.amount || ''
+      customer_id: booking?.customer_id || booking?.customer?.id || "",
+      amount: booking?.total_amount || booking?.amount || "",
     }));
   };
 
   const handleRecordPayment = async (e) => {
     e.preventDefault();
     if (!recordForm.booking_id || !recordForm.amount) {
-      showAlert('Warning', 'Booking and amount are required', 'warning');
+      showAlert("Warning", "Booking and amount are required", "warning");
       return;
     }
     try {
-      showAlert.loading('Processing...', 'Recording payment...');
+      showAlert.loading("Processing...", "Recording payment...");
       await createPayment({
         booking_id: Number(recordForm.booking_id),
         customer_id: Number(recordForm.customer_id),
@@ -494,18 +519,19 @@ const FinanceDashboard = () => {
         currency: recordForm.currency,
         payment_method: recordForm.payment_method,
         transaction_id: recordForm.transaction_id || undefined,
-        notes: recordForm.notes || undefined
+        notes: recordForm.notes || undefined,
       });
       showAlert.close();
-      showAlert.success('Success!', 'Payment recorded successfully');
+      showAlert.success("Success!", "Payment recorded successfully");
       setShowRecordModal(false);
       fetchFinanceData(false);
     } catch (err) {
       showAlert.close();
-      const msg = err.response?.data?.message || err.response?.data?.errors
-        ? Object.values(err.response.data.errors).flat().join(', ')
-        : 'Failed to record payment';
-      showAlert.error('Error', msg);
+      const msg =
+        err.response?.data?.message || err.response?.data?.errors
+          ? Object.values(err.response.data.errors).flat().join(", ")
+          : "Failed to record payment";
+      showAlert.error("Error", msg);
     }
   };
 
@@ -783,8 +809,12 @@ const FinanceDashboard = () => {
                           <p className="text-white font-medium">
                             {payment.booking?.customer?.full_name ||
                               payment.customer?.full_name ||
-                              (payment.booking?.customer?.first_name ? `${payment.booking.customer.first_name} ${payment.booking.customer.last_name || ''}`.trim() : null) ||
-                              (payment.customer?.first_name ? `${payment.customer.first_name} ${payment.customer.last_name || ''}`.trim() : null) ||
+                              (payment.booking?.customer?.first_name
+                                ? `${payment.booking.customer.first_name} ${payment.booking.customer.last_name || ""}`.trim()
+                                : null) ||
+                              (payment.customer?.first_name
+                                ? `${payment.customer.first_name} ${payment.customer.last_name || ""}`.trim()
+                                : null) ||
                               payment.customer_name ||
                               "Unknown Customer"}
                           </p>
@@ -849,27 +879,27 @@ const FinanceDashboard = () => {
                         <DropdownMenu
                           items={[
                             {
-                              label: 'View Details',
+                              label: "View Details",
                               icon: <FaEye />,
-                              onClick: () => handleViewPayment(payment)
+                              onClick: () => handleViewPayment(payment),
                             },
-                            payment.status === 'pending' && {
-                              label: 'Mark Completed',
+                            payment.status === "pending" && {
+                              label: "Mark Completed",
                               icon: <FaCheckDouble />,
-                              onClick: () => handleMarkCompleted(payment)
+                              onClick: () => handleMarkCompleted(payment),
                             },
-                            payment.status === 'completed' && {
-                              label: 'Process Refund',
+                            payment.status === "completed" && {
+                              label: "Process Refund",
                               icon: <FaUndo />,
                               onClick: () => handleProcessRefund(payment),
-                              danger: true
+                              danger: true,
                             },
-                            payment.status === 'pending' && {
-                              label: 'Cancel Payment',
+                            payment.status === "pending" && {
+                              label: "Cancel Payment",
                               icon: <FaBan />,
                               onClick: () => handleCancelPayment(payment),
-                              danger: true
-                            }
+                              danger: true,
+                            },
                           ].filter(Boolean)}
                         />
                       </td>
@@ -973,54 +1003,97 @@ const FinanceDashboard = () => {
           <div className="bg-[#1a1f28] border border-gray-700 rounded-xl w-full max-w-lg max-h-[80vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-700 flex items-center justify-between">
               <h3 className="text-xl font-bold text-white">Payment Details</h3>
-              <button onClick={() => setViewingPayment(null)} className="text-gray-400 hover:text-white">
+              <button
+                onClick={() => setViewingPayment(null)}
+                className="text-gray-400 hover:text-white"
+              >
                 <FaTimes />
               </button>
             </div>
             {viewLoading ? (
-              <div className="p-6 text-center"><FaSpinner className="animate-spin text-blue-500 text-2xl mx-auto" /></div>
+              <div className="p-6 text-center">
+                <FaSpinner className="animate-spin text-blue-500 text-2xl mx-auto" />
+              </div>
             ) : (
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-gray-400 text-sm">Payment Reference</p>
-                    <p className="text-white font-semibold">{viewingPayment.payment_reference || `PAY-${viewingPayment.id}`}</p>
+                    <p className="text-white font-semibold">
+                      {viewingPayment.payment_reference ||
+                        `PAY-${viewingPayment.id}`}
+                    </p>
                   </div>
                   <div>
                     <p className="text-gray-400 text-sm">Status</p>
-                    <div className="mt-1">{getStatusBadge(viewingPayment.status)}</div>
+                    <div className="mt-1">
+                      {getStatusBadge(viewingPayment.status)}
+                    </div>
                   </div>
                   <div>
                     <p className="text-gray-400 text-sm">Amount</p>
-                    <p className="text-white font-semibold text-lg">{formatCurrency(viewingPayment.amount)}</p>
+                    <p className="text-white font-semibold text-lg">
+                      {formatCurrency(viewingPayment.amount)}
+                    </p>
                   </div>
                   <div>
                     <p className="text-gray-400 text-sm">Currency</p>
-                    <p className="text-white">{viewingPayment.currency || 'USD'}</p>
+                    <p className="text-white">
+                      {viewingPayment.currency || "USD"}
+                    </p>
                   </div>
                   <div>
                     <p className="text-gray-400 text-sm">Payment Method</p>
-                    <p className="text-white capitalize">{viewingPayment.payment_method?.replace('_', ' ') || 'N/A'}</p>
+                    <p className="text-white capitalize">
+                      {viewingPayment.payment_method?.replace("_", " ") ||
+                        "N/A"}
+                    </p>
                   </div>
                   <div>
                     <p className="text-gray-400 text-sm">Payment Date</p>
-                    <p className="text-white">{formatDate(viewingPayment.payment_date || viewingPayment.created_at)}</p>
+                    <p className="text-white">
+                      {formatDate(
+                        viewingPayment.payment_date ||
+                          viewingPayment.created_at,
+                      )}
+                    </p>
                   </div>
                 </div>
                 <hr className="border-gray-700" />
                 <div>
                   <p className="text-gray-400 text-sm mb-1">Customer</p>
-                  <p className="text-white font-medium">{viewingPayment.booking?.customer?.full_name || viewingPayment.customer?.full_name || (viewingPayment.booking?.customer?.first_name ? `${viewingPayment.booking.customer.first_name} ${viewingPayment.booking.customer.last_name || ''}`.trim() : null) || viewingPayment.customer_name || 'Unknown'}</p>
-                  <p className="text-gray-400 text-sm">{viewingPayment.booking?.customer?.email || viewingPayment.customer?.email || ''}</p>
+                  <p className="text-white font-medium">
+                    {viewingPayment.booking?.customer?.full_name ||
+                      viewingPayment.customer?.full_name ||
+                      (viewingPayment.booking?.customer?.first_name
+                        ? `${viewingPayment.booking.customer.first_name} ${viewingPayment.booking.customer.last_name || ""}`.trim()
+                        : null) ||
+                      viewingPayment.customer_name ||
+                      "Unknown"}
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    {viewingPayment.booking?.customer?.email ||
+                      viewingPayment.customer?.email ||
+                      ""}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm mb-1">Booking Reference</p>
-                  <p className="text-white">{viewingPayment.booking?.reference_number || viewingPayment.booking?.booking_reference || `BK-${viewingPayment.booking_id}` || 'N/A'}</p>
+                  <p className="text-gray-400 text-sm mb-1">
+                    Booking Reference
+                  </p>
+                  <p className="text-white">
+                    {viewingPayment.booking?.reference_number ||
+                      viewingPayment.booking?.booking_reference ||
+                      `BK-${viewingPayment.booking_id}` ||
+                      "N/A"}
+                  </p>
                 </div>
                 {viewingPayment.transaction_id && (
                   <div>
                     <p className="text-gray-400 text-sm mb-1">Transaction ID</p>
-                    <p className="text-white font-mono text-sm">{viewingPayment.transaction_id}</p>
+                    <p className="text-white font-mono text-sm">
+                      {viewingPayment.transaction_id}
+                    </p>
                   </div>
                 )}
                 {viewingPayment.notes && (
@@ -1041,13 +1114,18 @@ const FinanceDashboard = () => {
           <div className="bg-[#1a1f28] border border-gray-700 rounded-xl w-full max-w-lg max-h-[80vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-700 flex items-center justify-between">
               <h3 className="text-xl font-bold text-white">Record Payment</h3>
-              <button onClick={() => setShowRecordModal(false)} className="text-gray-400 hover:text-white">
+              <button
+                onClick={() => setShowRecordModal(false)}
+                className="text-gray-400 hover:text-white"
+              >
                 <FaTimes />
               </button>
             </div>
             <form onSubmit={handleRecordPayment} className="p-6 space-y-4">
               <div>
-                <label className="block text-gray-400 text-sm mb-1">Booking *</label>
+                <label className="block text-gray-400 text-sm mb-1">
+                  Booking *
+                </label>
                 <select
                   value={recordForm.booking_id}
                   onChange={(e) => handleBookingSelect(e.target.value)}
@@ -1055,32 +1133,53 @@ const FinanceDashboard = () => {
                   className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
                 >
                   <option value="">Select a booking...</option>
-                  {bookings.map(b => (
+                  {bookings.map((b) => (
                     <option key={b.id} value={b.id}>
-                      {b.reference_number || b.booking_reference || `BK-${b.id}`} — {b.customer?.full_name || (b.customer?.first_name ? `${b.customer.first_name} ${b.customer.last_name || ''}`.trim() : 'Unknown')}
+                      {b.reference_number ||
+                        b.booking_reference ||
+                        `BK-${b.id}`}{" "}
+                      —{" "}
+                      {b.customer?.full_name ||
+                        (b.customer?.first_name
+                          ? `${b.customer.first_name} ${b.customer.last_name || ""}`.trim()
+                          : "Unknown")}
                     </option>
                   ))}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-gray-400 text-sm mb-1">Amount *</label>
+                  <label className="block text-gray-400 text-sm mb-1">
+                    Amount *
+                  </label>
                   <input
                     type="number"
                     step="0.01"
                     min="0.01"
                     value={recordForm.amount}
-                    onChange={(e) => setRecordForm(prev => ({ ...prev, amount: e.target.value }))}
+                    onChange={(e) =>
+                      setRecordForm((prev) => ({
+                        ...prev,
+                        amount: e.target.value,
+                      }))
+                    }
                     required
                     className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
                     placeholder="0.00"
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 text-sm mb-1">Currency</label>
+                  <label className="block text-gray-400 text-sm mb-1">
+                    Currency
+                  </label>
                   <select
                     value={recordForm.currency}
-                    onChange={(e) => setRecordForm(prev => ({ ...prev, currency: e.target.value }))}
+                    onChange={(e) =>
+                      setRecordForm((prev) => ({
+                        ...prev,
+                        currency: e.target.value,
+                      }))
+                    }
                     className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   >
                     <option value="USD">USD</option>
@@ -1091,10 +1190,17 @@ const FinanceDashboard = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-gray-400 text-sm mb-1">Payment Method</label>
+                <label className="block text-gray-400 text-sm mb-1">
+                  Payment Method
+                </label>
                 <select
                   value={recordForm.payment_method}
-                  onChange={(e) => setRecordForm(prev => ({ ...prev, payment_method: e.target.value }))}
+                  onChange={(e) =>
+                    setRecordForm((prev) => ({
+                      ...prev,
+                      payment_method: e.target.value,
+                    }))
+                  }
                   className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
                 >
                   <option value="bank_transfer">Bank Transfer</option>
@@ -1104,20 +1210,34 @@ const FinanceDashboard = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-gray-400 text-sm mb-1">Transaction ID</label>
+                <label className="block text-gray-400 text-sm mb-1">
+                  Transaction ID
+                </label>
                 <input
                   type="text"
                   value={recordForm.transaction_id}
-                  onChange={(e) => setRecordForm(prev => ({ ...prev, transaction_id: e.target.value }))}
+                  onChange={(e) =>
+                    setRecordForm((prev) => ({
+                      ...prev,
+                      transaction_id: e.target.value,
+                    }))
+                  }
                   className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   placeholder="External transaction reference"
                 />
               </div>
               <div>
-                <label className="block text-gray-400 text-sm mb-1">Notes</label>
+                <label className="block text-gray-400 text-sm mb-1">
+                  Notes
+                </label>
                 <textarea
                   value={recordForm.notes}
-                  onChange={(e) => setRecordForm(prev => ({ ...prev, notes: e.target.value }))}
+                  onChange={(e) =>
+                    setRecordForm((prev) => ({
+                      ...prev,
+                      notes: e.target.value,
+                    }))
+                  }
                   rows={3}
                   className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500 resize-none"
                   placeholder="Payment notes..."

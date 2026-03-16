@@ -67,7 +67,7 @@ import DevCredentials from "./pages/DevCredentials";
 // Only show chatbot on non-admin pages
 function ChatbotWrapper() {
   const location = useLocation();
-  if (location.pathname.startsWith('/admin')) return null;
+  if (location.pathname.startsWith("/admin")) return null;
   return <AIChatbot />;
 }
 

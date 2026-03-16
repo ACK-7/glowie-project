@@ -722,7 +722,7 @@ export const createPayment = async (data) => {
   const response = await axios.post(
     `${API_BASE_URL}/admin/crud/payments`,
     data,
-    { headers: getAuthHeaders() }
+    { headers: getAuthHeaders() },
   );
   return response.data;
 };
@@ -741,7 +741,7 @@ export const updatePaymentStatus = async (id, status, notes = null) => {
   const response = await axios.put(
     `${API_BASE_URL}/admin/crud/payments/${id}`,
     { status, notes },
-    { headers: getAuthHeaders() }
+    { headers: getAuthHeaders() },
   );
   return response.data;
 };

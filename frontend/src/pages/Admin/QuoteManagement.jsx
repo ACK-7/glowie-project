@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  FaCalculator, 
-  FaPaperPlane, 
-  FaFileAlt, 
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  FaCalculator,
+  FaPaperPlane,
+  FaFileAlt,
   FaSpinner,
   FaSearch,
   FaEye,
@@ -19,12 +19,12 @@ import {
   FaClock,
   FaCheckCircle,
   FaChevronLeft,
-  FaChevronRight
-} from 'react-icons/fa';
-import { 
-  getQuotes, 
+  FaChevronRight,
+} from "react-icons/fa";
+import {
+  getQuotes,
   getQuote,
-  createQuote, 
+  createQuote,
   updateQuote,
   approveQuote,
   rejectQuote,
@@ -32,11 +32,11 @@ import {
   getQuotesRequiringApproval,
   getExpiringQuotes,
   getQuoteStatistics,
-  searchQuotes
-} from '../../services/adminService';
-import { showAlert, showConfirm } from '../../utils/sweetAlert';
-import QuoteCreateModal from '../../components/Admin/QuoteCreateModal';
-import DropdownMenu from '../../components/UI/DropdownMenu';
+  searchQuotes,
+} from "../../services/adminService";
+import { showAlert, showConfirm } from "../../utils/sweetAlert";
+import QuoteCreateModal from "../../components/Admin/QuoteCreateModal";
+import DropdownMenu from "../../components/UI/DropdownMenu";
 
 const QuoteManagement = () => {
   const navigate = useNavigate();
@@ -45,8 +45,8 @@ const QuoteManagement = () => {
   const [statistics, setStatistics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [showRequiringApproval, setShowRequiringApproval] = useState(false);
   const [showExpiring, setShowExpiring] = useState(false);
 
@@ -63,15 +63,15 @@ const QuoteManagement = () => {
 
   // Quick quote calculator state
   const [formData, setFormData] = useState({
-    vehicleType: '',
-    origin: '',
-    destination: 'Kampala',
-    estimatedCost: 0
+    vehicleType: "",
+    origin: "",
+    destination: "Kampala",
+    estimatedCost: 0,
   });
 
   useEffect(() => {
     fetchData();
-    
+
     // Cleanup function to clear search timeout
     return () => {
       if (window.searchTimeout) {
@@ -82,9 +82,16 @@ const QuoteManagement = () => {
 
   useEffect(() => {
     // Reset to first page when filters change (but not search term)
-    if (currentPage !== 1 && (statusFilter !== 'all' || showRequiringApproval || showExpiring)) {
+    if (
+      currentPage !== 1 &&
+      (statusFilter !== "all" || showRequiringApproval || showExpiring)
+    ) {
       setCurrentPage(1);
-    } else if (statusFilter !== 'all' || showRequiringApproval || showExpiring) {
+    } else if (
+      statusFilter !== "all" ||
+      showRequiringApproval ||
+      showExpiring
+    ) {
       filterQuotes();
     } else if (!searchTerm) {
       // No filters active and no search, use paginated data
@@ -95,33 +102,33 @@ const QuoteManagement = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      console.log('Fetching quotes data...', { currentPage, perPage });
-      
+      console.log("Fetching quotes data...", { currentPage, perPage });
+
       // Build query parameters
       const params = {
         page: currentPage,
         per_page: perPage,
-        with: 'customer,vehicle,route',
-        sort_by: 'created_at',
-        sort_direction: 'desc'
+        with: "customer,vehicle,route",
+        sort_by: "created_at",
+        sort_direction: "desc",
       };
 
       // Add filters to params
-      if (statusFilter !== 'all') {
+      if (statusFilter !== "all") {
         params.status = statusFilter;
       }
 
       const [quotesResponse, statsResponse] = await Promise.all([
         getQuotes(params),
-        getQuoteStatistics().catch(() => null)
+        getQuoteStatistics().catch(() => null),
       ]);
-      
-      console.log('Raw quotes response:', quotesResponse);
-      
+
+      console.log("Raw quotes response:", quotesResponse);
+
       // Handle paginated response structure
       let quotesData = [];
       let paginationData = null;
-      
+
       if (quotesResponse?.data) {
         if (quotesResponse.success && Array.isArray(quotesResponse.data)) {
           // ApiResponseService structure
@@ -133,10 +140,13 @@ const QuoteManagement = () => {
               per_page: quotesResponse.meta.pagination.per_page,
               total: quotesResponse.meta.pagination.total,
               from: quotesResponse.meta.pagination.from,
-              to: quotesResponse.meta.pagination.to
+              to: quotesResponse.meta.pagination.to,
             };
           }
-        } else if (quotesResponse.data.data && Array.isArray(quotesResponse.data.data)) {
+        } else if (
+          quotesResponse.data.data &&
+          Array.isArray(quotesResponse.data.data)
+        ) {
           // Laravel pagination structure (fallback)
           quotesData = quotesResponse.data.data;
           paginationData = {
@@ -145,7 +155,7 @@ const QuoteManagement = () => {
             per_page: quotesResponse.data.per_page,
             total: quotesResponse.data.total,
             from: quotesResponse.data.from,
-            to: quotesResponse.data.to
+            to: quotesResponse.data.to,
           };
         } else if (Array.isArray(quotesResponse.data)) {
           quotesData = quotesResponse.data;
@@ -153,16 +163,16 @@ const QuoteManagement = () => {
       } else if (Array.isArray(quotesResponse)) {
         quotesData = quotesResponse;
       }
-      
-      console.log('Processed quotes data:', quotesData);
-      console.log('Pagination info:', paginationData);
-      
+
+      console.log("Processed quotes data:", quotesData);
+      console.log("Pagination info:", paginationData);
+
       // Ensure quotesData is always an array
       const safeQuotesData = Array.isArray(quotesData) ? quotesData : [];
-      
+
       setQuotes(safeQuotesData);
       setFilteredQuotes(safeQuotesData); // For paginated data, filtered quotes are the same as quotes
-      
+
       // Update pagination state
       if (paginationData) {
         setCurrentPage(paginationData.current_page);
@@ -176,12 +186,14 @@ const QuoteManagement = () => {
         setTotalPages(1);
         setPaginationInfo(null);
       }
-      
+
       setStatistics(statsResponse?.data || null);
       setError(null);
     } catch (err) {
-      console.error('Failed to fetch quotes data:', err);
-      setError('Failed to load quotes. Please ensure you are logged in as Admin.');
+      console.error("Failed to fetch quotes data:", err);
+      setError(
+        "Failed to load quotes. Please ensure you are logged in as Admin.",
+      );
       setQuotes([]);
       setFilteredQuotes([]);
       setTotalQuotes(0);
@@ -198,7 +210,7 @@ const QuoteManagement = () => {
       try {
         setLoading(true);
         let response;
-        
+
         if (showRequiringApproval) {
           response = await getQuotesRequiringApproval();
         } else if (showExpiring) {
@@ -206,7 +218,7 @@ const QuoteManagement = () => {
         } else if (searchTerm) {
           response = await searchQuotes(searchTerm);
         }
-        
+
         // Ensure we always get an array
         let filteredData = [];
         if (response?.data) {
@@ -218,21 +230,20 @@ const QuoteManagement = () => {
         } else if (Array.isArray(response)) {
           filteredData = response;
         }
-        
-        console.log('Filtered data:', filteredData);
+
+        console.log("Filtered data:", filteredData);
         setFilteredQuotes(filteredData);
-        
+
         // Reset pagination for filtered results
         setTotalQuotes(filteredData.length);
         setTotalPages(1);
         setCurrentPage(1);
         setPaginationInfo(null);
-        
       } catch (err) {
-        console.error('Failed to fetch filtered quotes:', err);
+        console.error("Failed to fetch filtered quotes:", err);
         // Set empty array on error to prevent map errors
         setFilteredQuotes([]);
-        setError('Failed to filter quotes. Please try again.');
+        setError("Failed to filter quotes. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -244,40 +255,42 @@ const QuoteManagement = () => {
 
   const handleSearch = async (term) => {
     setSearchTerm(term);
-    
+
     // Clear any existing timeout
     if (window.searchTimeout) {
       clearTimeout(window.searchTimeout);
     }
-    
+
     if (term.length >= 2) {
       // Debounce search by 500ms
       window.searchTimeout = setTimeout(async () => {
         try {
           setLoading(true);
           const response = await searchQuotes(term);
-          
+
           // Handle search response
           let searchResults = [];
           if (response?.data) {
             if (Array.isArray(response.data)) {
               searchResults = response.data;
-            } else if (response.data.data && Array.isArray(response.data.data)) {
+            } else if (
+              response.data.data &&
+              Array.isArray(response.data.data)
+            ) {
               searchResults = response.data.data;
             }
           } else if (Array.isArray(response)) {
             searchResults = response;
           }
-          
+
           setFilteredQuotes(searchResults);
           setTotalQuotes(searchResults.length);
           setTotalPages(1);
           setCurrentPage(1);
           setPaginationInfo(null);
-          
         } catch (err) {
-          console.error('Search failed:', err);
-          setError('Search failed. Please try again.');
+          console.error("Search failed:", err);
+          setError("Search failed. Please try again.");
           setFilteredQuotes([]);
         } finally {
           setLoading(false);
@@ -303,50 +316,54 @@ const QuoteManagement = () => {
 
   const handleApprove = async (quote) => {
     try {
-      console.log('Approving quote:', quote);
-      await approveQuote(quote.id, 'Quote approved by admin');
-      await showAlert('Success', 'Quote approved successfully', 'success');
+      console.log("Approving quote:", quote);
+      await approveQuote(quote.id, "Quote approved by admin");
+      await showAlert("Success", "Quote approved successfully", "success");
       fetchData();
     } catch (error) {
-      console.error('Approve failed:', error);
-      await showAlert('Error', 'Failed to approve quote', 'error');
+      console.error("Approve failed:", error);
+      await showAlert("Error", "Failed to approve quote", "error");
     }
   };
 
   const handleReject = async (quote) => {
     const confirmed = await showConfirm(
-      'Reject Quote',
+      "Reject Quote",
       `Are you sure you want to reject quote ${quote.quote_reference || `Q-${quote.id}`}?`,
-      'warning'
+      "warning",
     );
 
     if (confirmed) {
       try {
-        await rejectQuote(quote.id, 'Quote rejected by admin');
-        await showAlert('Success', 'Quote rejected successfully', 'success');
+        await rejectQuote(quote.id, "Quote rejected by admin");
+        await showAlert("Success", "Quote rejected successfully", "success");
         fetchData();
       } catch (error) {
-        console.error('Reject failed:', error);
-        await showAlert('Error', 'Failed to reject quote', 'error');
+        console.error("Reject failed:", error);
+        await showAlert("Error", "Failed to reject quote", "error");
       }
     }
   };
 
   const handleConvertToBooking = async (quote) => {
     const confirmed = await showConfirm(
-      'Convert to Booking',
+      "Convert to Booking",
       `Convert quote ${quote.quote_reference || `Q-${quote.id}`} to a booking?`,
-      'question'
+      "question",
     );
 
     if (confirmed) {
       try {
         await convertQuoteToBooking(quote.id);
-        await showAlert('Success', 'Quote converted to booking successfully', 'success');
+        await showAlert(
+          "Success",
+          "Quote converted to booking successfully",
+          "success",
+        );
         fetchData();
       } catch (error) {
-        console.error('Convert failed:', error);
-        await showAlert('Error', 'Failed to convert quote to booking', 'error');
+        console.error("Convert failed:", error);
+        await showAlert("Error", "Failed to convert quote to booking", "error");
       }
     }
   };
@@ -359,45 +376,53 @@ const QuoteManagement = () => {
   const handleDelete = async (quote) => {
     try {
       const confirmed = await showConfirm(
-        'Delete Quote',
+        "Delete Quote",
         `Are you sure you want to delete quote ${quote.quote_reference || `Q-${quote.id}`}? This action cannot be undone.`,
-        'warning',
-        'Delete',
-        'Cancel'
+        "warning",
+        "Delete",
+        "Cancel",
       );
       if (confirmed) {
-        const { deleteQuote } = await import('../../services/adminService');
+        const { deleteQuote } = await import("../../services/adminService");
         await deleteQuote(quote.id);
-        await showAlert('Success', 'Quote deleted successfully', 'success');
+        await showAlert("Success", "Quote deleted successfully", "success");
         fetchData();
       }
     } catch (err) {
-      console.error('Delete failed:', err);
-      await showAlert('Error', 'Failed to delete quote', 'error');
+      console.error("Delete failed:", err);
+      await showAlert("Error", "Failed to delete quote", "error");
     }
   };
 
   const calculateQuote = async () => {
     if (!formData.origin || !formData.vehicleType) {
-      await showAlert('Error', 'Please fill in vehicle type and origin', 'error');
+      await showAlert(
+        "Error",
+        "Please fill in vehicle type and origin",
+        "error",
+      );
       return;
     }
-    
+
     try {
       // This would typically call an API endpoint for quote calculation
-      const baseCosts = { 
-        Japan: 2000, 
-        UK: 3000, 
+      const baseCosts = {
+        Japan: 2000,
+        UK: 3000,
         UAE: 1500,
-        'United States': 3500,
+        "United States": 3500,
         Germany: 2800,
-        Canada: 3200
+        Canada: 3200,
       };
       const cost = baseCosts[formData.origin] || 2000;
       setFormData({ ...formData, estimatedCost: cost });
     } catch (err) {
-      console.error('Failed to calculate quote:', err);
-      await showAlert('Error', 'Failed to calculate quote. Please try again.', 'error');
+      console.error("Failed to calculate quote:", err);
+      await showAlert(
+        "Error",
+        "Failed to calculate quote. Please try again.",
+        "error",
+      );
     }
   };
 
@@ -418,16 +443,43 @@ const QuoteManagement = () => {
 
   const getStatusBadge = (status) => {
     const config = {
-      pending: { bg: 'bg-yellow-900/30', text: 'text-yellow-400', label: 'Pending', icon: FaClock },
-      approved: { bg: 'bg-green-900/30', text: 'text-green-400', label: 'Approved', icon: FaCheckCircle },
-      rejected: { bg: 'bg-red-900/30', text: 'text-red-400', label: 'Rejected', icon: FaTimes },
-      expired: { bg: 'bg-gray-900/30', text: 'text-gray-400', label: 'Expired', icon: FaExclamationCircle },
-      converted: { bg: 'bg-blue-900/30', text: 'text-blue-400', label: 'Converted', icon: FaCheck }
+      pending: {
+        bg: "bg-yellow-900/30",
+        text: "text-yellow-400",
+        label: "Pending",
+        icon: FaClock,
+      },
+      approved: {
+        bg: "bg-green-900/30",
+        text: "text-green-400",
+        label: "Approved",
+        icon: FaCheckCircle,
+      },
+      rejected: {
+        bg: "bg-red-900/30",
+        text: "text-red-400",
+        label: "Rejected",
+        icon: FaTimes,
+      },
+      expired: {
+        bg: "bg-gray-900/30",
+        text: "text-gray-400",
+        label: "Expired",
+        icon: FaExclamationCircle,
+      },
+      converted: {
+        bg: "bg-blue-900/30",
+        text: "text-blue-400",
+        label: "Converted",
+        icon: FaCheck,
+      },
     };
     const c = config[status] || config.pending;
     const IconComponent = c.icon;
     return (
-      <span className={`${c.bg} ${c.text} px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1`}>
+      <span
+        className={`${c.bg} ${c.text} px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1`}
+      >
         <IconComponent className="text-xs" />
         {c.label}
       </span>
@@ -435,16 +487,16 @@ const QuoteManagement = () => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
   const formatCurrency = (amount) => {
-    if (!amount || amount === 0) return '0';
+    if (!amount || amount === 0) return "0";
     return Number(amount).toLocaleString();
   };
 
@@ -460,14 +512,16 @@ const QuoteManagement = () => {
     <div className="max-w-[calc(100vw-2rem)] mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Quote Management</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">
+            Quote Management
+          </h1>
           <p className="text-gray-400">
             Manage shipping quotes and calculations
-            {paginationInfo ? (
-              ` (${paginationInfo.from}-${paginationInfo.to} of ${paginationInfo.total} quotes)`
-            ) : totalQuotes > 0 ? (
-              ` (${totalQuotes} quotes loaded)`
-            ) : ''}
+            {paginationInfo
+              ? ` (${paginationInfo.from}-${paginationInfo.to} of ${paginationInfo.total} quotes)`
+              : totalQuotes > 0
+                ? ` (${totalQuotes} quotes loaded)`
+                : ""}
           </p>
         </div>
         <button
@@ -486,7 +540,9 @@ const QuoteManagement = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Total Quotes</p>
-                <p className="text-2xl font-bold text-white">{statistics.total_quotes || 0}</p>
+                <p className="text-2xl font-bold text-white">
+                  {statistics.total_quotes || 0}
+                </p>
               </div>
               <FaFileAlt className="text-blue-500 text-2xl" />
             </div>
@@ -495,7 +551,9 @@ const QuoteManagement = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Pending Approval</p>
-                <p className="text-2xl font-bold text-white">{statistics.pending_quotes || 0}</p>
+                <p className="text-2xl font-bold text-white">
+                  {statistics.pending_quotes || 0}
+                </p>
               </div>
               <FaClock className="text-yellow-500 text-2xl" />
             </div>
@@ -504,7 +562,9 @@ const QuoteManagement = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Approved</p>
-                <p className="text-2xl font-bold text-white">{statistics.approved_quotes || 0}</p>
+                <p className="text-2xl font-bold text-white">
+                  {statistics.approved_quotes || 0}
+                </p>
               </div>
               <FaCheckCircle className="text-green-500 text-2xl" />
             </div>
@@ -513,7 +573,9 @@ const QuoteManagement = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Converted</p>
-                <p className="text-2xl font-bold text-white">{statistics.converted_quotes || 0}</p>
+                <p className="text-2xl font-bold text-white">
+                  {statistics.converted_quotes || 0}
+                </p>
               </div>
               <FaChartLine className="text-purple-500 text-2xl" />
             </div>
@@ -542,8 +604,8 @@ const QuoteManagement = () => {
               {searchTerm && (
                 <button
                   onClick={() => {
-                    setSearchTerm('');
-                    handleSearch('');
+                    setSearchTerm("");
+                    handleSearch("");
                   }}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
                 >
@@ -572,8 +634,8 @@ const QuoteManagement = () => {
               onClick={() => setShowRequiringApproval(!showRequiringApproval)}
               className={`px-4 py-3 rounded-lg font-medium transition-colors ${
                 showRequiringApproval
-                  ? 'bg-yellow-600 text-white'
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  ? "bg-yellow-600 text-white"
+                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
               }`}
             >
               <FaExclamationCircle className="inline mr-2" />
@@ -583,8 +645,8 @@ const QuoteManagement = () => {
             <button
               onClick={() => {
                 // Clear filters and refresh
-                setSearchTerm('');
-                setStatusFilter('all');
+                setSearchTerm("");
+                setStatusFilter("all");
                 setShowRequiringApproval(false);
                 setShowExpiring(false);
                 setCurrentPage(1);
@@ -608,21 +670,29 @@ const QuoteManagement = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end">
           <div>
-            <label className="block text-gray-400 text-sm mb-2">Vehicle Type</label>
+            <label className="block text-gray-400 text-sm mb-2">
+              Vehicle Type
+            </label>
             <input
               type="text"
               value={formData.vehicleType}
-              onChange={(e) => setFormData({ ...formData, vehicleType: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, vehicleType: e.target.value })
+              }
               className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-200 focus:outline-none focus:border-blue-500"
               placeholder="e.g., 2023 Toyota RAV4"
             />
           </div>
 
           <div>
-            <label className="block text-gray-400 text-sm mb-2">Origin Country</label>
+            <label className="block text-gray-400 text-sm mb-2">
+              Origin Country
+            </label>
             <select
               value={formData.origin}
-              onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, origin: e.target.value })
+              }
               className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-200 focus:outline-none focus:border-blue-500"
             >
               <option value="">Select origin</option>
@@ -636,11 +706,15 @@ const QuoteManagement = () => {
           </div>
 
           <div>
-            <label className="block text-gray-400 text-sm mb-2">Destination</label>
+            <label className="block text-gray-400 text-sm mb-2">
+              Destination
+            </label>
             <input
               type="text"
               value={formData.destination}
-              onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, destination: e.target.value })
+              }
               className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-200 focus:outline-none focus:border-blue-500"
               placeholder="Kampala, Uganda"
             />
@@ -658,7 +732,9 @@ const QuoteManagement = () => {
           {formData.estimatedCost > 0 && (
             <div className="bg-green-900/20 border border-green-700/50 rounded-lg p-4">
               <p className="text-gray-400 text-xs mb-1">Estimated Cost</p>
-              <p className="text-green-400 text-xl font-bold">{formatCurrency(formData.estimatedCost)}</p>
+              <p className="text-green-400 text-xl font-bold">
+                {formatCurrency(formData.estimatedCost)}
+              </p>
             </div>
           )}
         </div>
@@ -699,15 +775,22 @@ const QuoteManagement = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800">
-                {!Array.isArray(filteredQuotes) || filteredQuotes.length === 0 ? (
+                {!Array.isArray(filteredQuotes) ||
+                filteredQuotes.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center text-gray-400">
-                      {loading ? 'Loading quotes...' : 'No quotes found'}
+                    <td
+                      colSpan="7"
+                      className="px-6 py-12 text-center text-gray-400"
+                    >
+                      {loading ? "Loading quotes..." : "No quotes found"}
                     </td>
                   </tr>
                 ) : (
                   filteredQuotes.map((quote) => (
-                    <tr key={quote.id} className="hover:bg-gray-800/30 transition-colors">
+                    <tr
+                      key={quote.id}
+                      className="hover:bg-gray-800/30 transition-colors"
+                    >
                       <td className="px-6 py-4">
                         <div>
                           <p className="text-blue-400 font-semibold">
@@ -721,37 +804,49 @@ const QuoteManagement = () => {
                       <td className="px-6 py-4">
                         <div>
                           <p className="text-white font-medium">
-                            {quote.customer_name || 
-                             (quote.customer?.first_name && quote.customer?.last_name 
-                               ? `${quote.customer.first_name} ${quote.customer.last_name}` 
-                               : quote.customer?.full_name || quote.customer?.name || 'Unknown Customer')}
+                            {quote.customer_name ||
+                              (quote.customer?.first_name &&
+                              quote.customer?.last_name
+                                ? `${quote.customer.first_name} ${quote.customer.last_name}`
+                                : quote.customer?.full_name ||
+                                  quote.customer?.name ||
+                                  "Unknown Customer")}
                           </p>
                           <p className="text-gray-400 text-sm">
-                            {quote.customer_email || quote.customer?.email || 'No email'}
+                            {quote.customer_email ||
+                              quote.customer?.email ||
+                              "No email"}
                           </p>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div>
                           <p className="text-white font-medium">
-                            {quote.vehicle_full_description || 
-                             quote.vehicle_description ||
-                             (quote.vehicle_details ? 
-                               `${quote.vehicle_details.year || ''} ${quote.vehicle_details.make || ''} ${quote.vehicle_details.model || ''}`.trim() :
-                               'Vehicle details not available')}
+                            {quote.vehicle_full_description ||
+                              quote.vehicle_description ||
+                              (quote.vehicle_details
+                                ? `${quote.vehicle_details.year || ""} ${quote.vehicle_details.make || ""} ${quote.vehicle_details.model || ""}`.trim()
+                                : "Vehicle details not available")}
                           </p>
                           <p className="text-gray-400 text-sm">
-                            {quote.route_description || 
-                             (quote.route ? `${quote.route.origin_country} → ${quote.route.destination_country}` :
-                              `${quote.origin_country || 'N/A'} → ${quote.destination_country || 'Uganda'}`)}
+                            {quote.route_description ||
+                              (quote.route
+                                ? `${quote.route.origin_country} → ${quote.route.destination_country}`
+                                : `${quote.origin_country || "N/A"} → ${quote.destination_country || "Uganda"}`)}
                           </p>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <p className="text-white font-semibold">
-                          ${formatCurrency(quote.total_amount || quote.estimated_cost || quote.amount || 0)}
+                          $
+                          {formatCurrency(
+                            quote.total_amount ||
+                              quote.estimated_cost ||
+                              quote.amount ||
+                              0,
+                          )}
                         </p>
-                        {quote.currency && quote.currency !== 'USD' && (
+                        {quote.currency && quote.currency !== "USD" && (
                           <p className="text-gray-400 text-xs">
                             {quote.currency}
                           </p>
@@ -776,36 +871,37 @@ const QuoteManagement = () => {
                         <DropdownMenu
                           items={[
                             {
-                              label: 'View Details',
+                              label: "View Details",
                               icon: <FaEye />,
-                              onClick: () => navigate(`/admin/quotes/${quote.id}`)
+                              onClick: () =>
+                                navigate(`/admin/quotes/${quote.id}`),
                             },
                             {
-                              label: 'Edit Quote',
+                              label: "Edit Quote",
                               icon: <FaEdit />,
-                              onClick: () => handleEdit(quote)
+                              onClick: () => handleEdit(quote),
                             },
-                            quote.status === 'pending' && {
-                              label: 'Approve',
+                            quote.status === "pending" && {
+                              label: "Approve",
                               icon: <FaCheck />,
-                              onClick: () => handleApprove(quote)
+                              onClick: () => handleApprove(quote),
                             },
-                            quote.status === 'pending' && {
-                              label: 'Reject',
+                            quote.status === "pending" && {
+                              label: "Reject",
                               icon: <FaTimes />,
-                              onClick: () => handleReject(quote)
+                              onClick: () => handleReject(quote),
                             },
-                            quote.status === 'approved' && {
-                              label: 'Convert to Booking',
+                            quote.status === "approved" && {
+                              label: "Convert to Booking",
                               icon: <FaPaperPlane />,
-                              onClick: () => handleConvertToBooking(quote)
+                              onClick: () => handleConvertToBooking(quote),
                             },
                             {
-                              label: 'Delete Quote',
+                              label: "Delete Quote",
                               icon: <FaTrash />,
                               danger: true,
-                              onClick: () => handleDelete(quote)
-                            }
+                              onClick: () => handleDelete(quote),
+                            },
                           ].filter(Boolean)}
                         />
                       </td>
@@ -815,7 +911,7 @@ const QuoteManagement = () => {
               </tbody>
             </table>
           </div>
-          
+
           {/* Pagination Controls */}
           {totalPages > 1 && (
             <div className="px-6 py-4 border-t border-gray-800">
@@ -825,7 +921,9 @@ const QuoteManagement = () => {
                     <span className="text-gray-400 text-sm">Show:</span>
                     <select
                       value={perPage}
-                      onChange={(e) => handlePerPageChange(Number(e.target.value))}
+                      onChange={(e) =>
+                        handlePerPageChange(Number(e.target.value))
+                      }
                       className="px-3 py-1 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-blue-500"
                     >
                       <option value={10}>10</option>
@@ -835,10 +933,11 @@ const QuoteManagement = () => {
                     </select>
                     <span className="text-gray-400 text-sm">per page</span>
                   </div>
-                  
+
                   {paginationInfo && (
                     <div className="text-gray-400 text-sm">
-                      Showing {paginationInfo.from} to {paginationInfo.to} of {paginationInfo.total} results
+                      Showing {paginationInfo.from} to {paginationInfo.to} of{" "}
+                      {paginationInfo.total} results
                     </div>
                   )}
                 </div>
@@ -868,8 +967,8 @@ const QuoteManagement = () => {
                             onClick={() => handlePageChange(page)}
                             className={`px-3 py-2 rounded-lg transition-colors ${
                               currentPage === page
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
                             }`}
                           >
                             {page}
@@ -879,7 +978,11 @@ const QuoteManagement = () => {
                         page === currentPage - 3 ||
                         page === currentPage + 3
                       ) {
-                        return <span key={page} className="text-gray-500 px-2">...</span>;
+                        return (
+                          <span key={page} className="text-gray-500 px-2">
+                            ...
+                          </span>
+                        );
                       }
                       return null;
                     })}

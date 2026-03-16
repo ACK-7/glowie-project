@@ -31,13 +31,19 @@ const CITY_COORDS = {
   abidjan: [5.3484, -4.0083],
   dakar: [14.7167, -17.4677],
   // Indian Ocean & Transit Hubs
-  'colombo': [6.9271, 79.8612], 'sri lanka': [6.9271, 79.8612],
-  'mumbai': [19.0760, 72.8777], 'india': [19.0760, 72.8777],
-  'chennai': [13.0827, 80.2707], 'port of chennai': [13.0827, 80.2707],
-  'salalah': [17.0150, 54.0924], 'oman': [17.0150, 54.0924],
-  'aden': [12.7797, 45.0367], 'yemen': [12.7797, 45.0367],
-  'djibouti': [11.8251, 42.5903],
-  'port sudan': [19.6158, 37.2164], 'sudan': [15.5007, 32.5599],
+  colombo: [6.9271, 79.8612],
+  "sri lanka": [6.9271, 79.8612],
+  mumbai: [19.076, 72.8777],
+  india: [19.076, 72.8777],
+  chennai: [13.0827, 80.2707],
+  "port of chennai": [13.0827, 80.2707],
+  salalah: [17.015, 54.0924],
+  oman: [17.015, 54.0924],
+  aden: [12.7797, 45.0367],
+  yemen: [12.7797, 45.0367],
+  djibouti: [11.8251, 42.5903],
+  "port sudan": [19.6158, 37.2164],
+  sudan: [15.5007, 32.5599],
   tokyo: [35.6762, 139.6503],
   osaka: [34.6937, 135.5023],
   nagoya: [35.1815, 136.9066],
@@ -213,15 +219,24 @@ const TrackingMap = ({ shipment, booking }) => {
     // Show current location from shipment if available
     const currentLoc = shipment?.current_location;
     let currentCoords = null;
-    let currentLabel = 'In Transit';
+    let currentLabel = "In Transit";
 
-    if (currentLoc && typeof currentLoc === 'object' && currentLoc.lat && currentLoc.lng) {
+    if (
+      currentLoc &&
+      typeof currentLoc === "object" &&
+      currentLoc.lat &&
+      currentLoc.lng
+    ) {
       // Stored as {lat, lng, name}
       currentCoords = [currentLoc.lat, currentLoc.lng];
-      currentLabel = currentLoc.name || 'In Transit';
-    } else if (currentLoc && typeof currentLoc === 'string' && currentLoc.trim()) {
+      currentLabel = currentLoc.name || "In Transit";
+    } else if (
+      currentLoc &&
+      typeof currentLoc === "string" &&
+      currentLoc.trim()
+    ) {
       // Stored as a plain string — look it up in the city table
-      const locCoords = getCoords(currentLoc.trim(), '');
+      const locCoords = getCoords(currentLoc.trim(), "");
       if (locCoords) {
         currentCoords = locCoords;
         currentLabel = currentLoc;
@@ -229,9 +244,9 @@ const TrackingMap = ({ shipment, booking }) => {
     }
 
     // If no current location but booking is in_transit, interpolate a midpoint
-    if (!currentCoords && origin && dest && booking.status === 'in_transit') {
+    if (!currentCoords && origin && dest && booking.status === "in_transit") {
       currentCoords = [(origin[0] + dest[0]) / 2, (origin[1] + dest[1]) / 2];
-      currentLabel = 'En Route (estimated)';
+      currentLabel = "En Route (estimated)";
     }
 
     if (currentCoords) {
@@ -319,7 +334,10 @@ const TrackingMap = ({ shipment, booking }) => {
         title: "In Transit",
         icon: FaShip,
         status: getStepStatus("transit"),
-        location: (typeof shipment?.current_location === 'string' ? shipment.current_location : shipment?.current_location?.name) || "At Sea",
+        location:
+          (typeof shipment?.current_location === "string"
+            ? shipment.current_location
+            : shipment?.current_location?.name) || "At Sea",
       },
       {
         id: 5,

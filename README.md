@@ -1,22 +1,8 @@
-<div align="center">
+< align="center">
 
 # 🚢 ShipWithGlowie
 
-### AI-Powered Vehicle Shipping & Logistics Platform
-
-[![Laravel](https://img.shields.io/badge/Laravel-10.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)](https://laravel.com)
-[![React](https://img.shields.io/badge/React-18.x-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org)
-[![Python](https://img.shields.io/badge/Python-FastAPI-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://fastapi.tiangolo.com)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
-[![TailwindCSS](https://img.shields.io/badge/Tailwind-3.x-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
-
-A comprehensive, full-stack vehicle shipping logistics platform with AI-powered quoting, intelligent route optimization, real-time shipment tracking, and an integrated customer portal.
-
-[Features](#-features) · [Tech Stack](#-tech-stack) · [Getting Started](#-getting-started) · [Architecture](#-architecture) · [API Reference](#-api-reference) · [Documentation](#-documentation)
-
-</div>
-
----
+## A comprehensive, full-stack vehicle shipping logistics platform with AI-powered quoting, intelligent route optimization, real-time shipment tracking, and an integrated customer portal.
 
 ## 📋 Table of Contents
 
@@ -163,120 +149,6 @@ The platform leverages **AI agents** powered by LangChain and Mistral AI to prov
 | n8n            | AI workflow automation      |
 | Mailhog        | Email testing (development) |
 | phpMyAdmin     | Database management UI      |
-
----
-
-## 📁 Project Structure
-
-```
-shipwithglowie/
-├── frontend/                    # React SPA (Vite + Tailwind)
-│   ├── src/
-│   │   ├── components/          # Reusable UI components
-│   │   │   ├── Home/            # Homepage sections (Hero, Services, etc.)
-│   │   │   ├── Admin/           # Admin-specific components
-│   │   │   ├── Customer/        # Customer portal components
-│   │   │   ├── Common/          # Shared components (NotificationBell, etc.)
-│   │   │   └── AIChatbot.jsx    # AI support chatbot
-│   │   ├── pages/               # Route pages
-│   │   │   ├── Admin/           # Admin dashboard pages
-│   │   │   │   ├── Dashboard.jsx
-│   │   │   │   ├── FinanceDashboard.jsx
-│   │   │   │   ├── BookingManagement.jsx
-│   │   │   │   ├── QuoteManagement.jsx
-│   │   │   │   ├── ShipmentManagement.jsx
-│   │   │   │   ├── CustomerManagement.jsx
-│   │   │   │   ├── DocumentManager.jsx
-│   │   │   │   ├── UserManagement.jsx
-│   │   │   │   ├── CarInventoryManagement.jsx
-│   │   │   │   └── ...
-│   │   │   ├── CustomerPortal.jsx
-│   │   │   ├── Cars.jsx
-│   │   │   ├── CarCompare.jsx
-│   │   │   ├── Quote.jsx
-│   │   │   └── ...
-│   │   ├── services/            # API service layers
-│   │   │   ├── api.js           # Axios instance & interceptors
-│   │   │   ├── customerService.js
-│   │   │   └── adminService.js
-│   │   ├── context/             # React context providers
-│   │   ├── layouts/             # Page layouts (Public, Admin)
-│   │   └── App.jsx              # Root router & app shell
-│   ├── public/                  # Static assets
-│   ├── package.json
-│   ├── vite.config.js
-│   └── tailwind.config.js
-│
-├── backend/                     # Laravel API
-│   ├── app/
-│   │   ├── Http/
-│   │   │   ├── Controllers/     # API controllers
-│   │   │   │   ├── Admin/       # Admin CRUD controllers
-│   │   │   │   ├── AuthController.php
-│   │   │   │   ├── CustomerController.php
-│   │   │   │   ├── TrackingController.php
-│   │   │   │   └── ...
-│   │   │   └── Middleware/
-│   │   ├── Models/              # Eloquent models
-│   │   │   ├── Booking.php
-│   │   │   ├── Customer.php
-│   │   │   ├── Payment.php
-│   │   │   ├── Quote.php
-│   │   │   ├── Shipment.php
-│   │   │   └── ...
-│   │   ├── Repositories/        # Repository pattern data access
-│   │   ├── Services/            # Business logic services
-│   │   └── Providers/
-│   ├── database/
-│   │   ├── migrations/          # Database schema
-│   │   └── seeders/             # Data seeding
-│   ├── routes/
-│   │   └── api.php              # API route definitions
-│   └── docker/
-│       ├── Dockerfile
-│       ├── entrypoint.sh
-│       └── php.ini
-│
-├── ai-service/                  # Python AI microservice
-│   ├── agents/                  # LangChain agent implementations
-│   │   ├── quote_agent.py
-│   │   ├── route_agent.py
-│   │   ├── document_agent.py
-│   │   ├── support_agent.py
-│   │   ├── delay_agent.py
-│   │   └── notification_agent.py
-│   ├── models/                  # Data schemas
-│   ├── config/                  # Service configuration
-│   ├── utils/                   # Utility functions
-│   ├── main.py                  # FastAPI server entry point
-│   ├── requirements.txt
-│   └── Dockerfile
-│
-├── docker/                      # Docker configuration
-├── scripts/                     # Utility scripts
-│   ├── docker-up.sh             # Start containers
-│   ├── docker-down.sh           # Stop containers
-│   ├── docker-build.sh          # Build images
-│   ├── docker-migrate.sh        # Run migrations
-│   ├── docker-seed.sh           # Seed database
-│   ├── seed-admin-database.*    # Seed admin user
-│   └── setup-email.*            # Email configuration
-│
-├── docs/                        # Project documentation
-│   ├── SETUP_GUIDE.md
-│   ├── DOCKER_SETUP.md
-│   ├── DATABASE_SCHEMA.md
-│   ├── ARCHITECTURE.md
-│   ├── API_DOCUMENTATION.md
-│   ├── AI_INTEGRATION.md
-│   ├── DEPLOYMENT.md
-│   └── ...
-│
-├── docker-compose.yml           # Development environment
-├── docker-compose.prod.yml      # Production environment
-├── .env.example                 # Environment template
-└── README.md
-```
 
 ---
 
@@ -526,22 +398,6 @@ docker-compose -f docker-compose.prod.yml up -d --build
 | `POST` | `/api/documents`              | Upload document        |
 | `POST` | `/api/documents/{id}/extract` | OCR extraction         |
 
-### Admin Endpoints (Authenticated + Admin)
-
-| Group                       | Endpoints                                               | Description           |
-| --------------------------- | ------------------------------------------------------- | --------------------- |
-| `/api/admin/dashboard`      | `statistics`, `kpis`, `revenue-analytics`, `chart-data` | Dashboard analytics   |
-| `/api/admin/crud/bookings`  | Full CRUD + `status`, `payment`, `analytics`            | Booking management    |
-| `/api/admin/crud/quotes`    | Full CRUD + `approve`, `reject`, `convert`              | Quote management      |
-| `/api/admin/crud/payments`  | Full CRUD + `complete`, `refund`, `revenue-analytics`   | Payment management    |
-| `/api/admin/crud/shipments` | Full CRUD + `live-tracking`, `route`, `geocode`         | Shipment management   |
-| `/api/admin/crud/customers` | Full CRUD + `verify`, `search`, `export`                | Customer management   |
-| `/api/admin/crud/documents` | Full CRUD + `approve`, `reject`, `bulk` operations      | Document management   |
-| `/api/admin/inventory`      | Cars, brands, categories CRUD                           | Car inventory         |
-| `/api/admin/system`         | Settings, health, metrics, cache                        | System administration |
-
-> 📖 For full API documentation, see [`docs/API_DOCUMENTATION.md`](docs/API_DOCUMENTATION.md)
-
 ---
 
 ## 🤖 AI Service
@@ -570,8 +426,6 @@ The AI microservice is built with **FastAPI** and uses **LangChain** agents orch
 - **OCR**: Tesseract + PDF2Image for document text extraction
 - **Data**: SQLAlchemy + Redis for persistence and caching
 - **Logging**: Loguru for structured logging
-
-> 📖 For AI integration details, see [`docs/AI_INTEGRATION.md`](docs/AI_INTEGRATION.md)
 
 ---
 
@@ -665,53 +519,6 @@ cd ai-service
 pip install -r requirements.txt
 uvicorn main:app --reload --host 0.0.0.0 --port 8001
 ```
-
-### Database Seeding
-
-```bash
-# Seed admin user
-./scripts/seed-admin-database.sh    # Linux/Mac
-./scripts/seed-admin-database.bat   # Windows
-
-# Seed routes
-./scripts/seed-routes-simple.bat    # Windows
-./scripts/seed-routes-docker.bat    # Via Docker
-```
-
-### Utility Scripts
-
-| Script                      | Purpose                     |
-| --------------------------- | --------------------------- |
-| `scripts/docker-up.sh`      | Start all Docker containers |
-| `scripts/docker-down.sh`    | Stop all containers         |
-| `scripts/docker-build.sh`   | Rebuild Docker images       |
-| `scripts/docker-shell.sh`   | Access container shell      |
-| `scripts/docker-migrate.sh` | Run database migrations     |
-| `scripts/docker-seed.sh`    | Seed database               |
-| `scripts/docker-logs.sh`    | View container logs         |
-| `scripts/setup-email.*`     | Configure email settings    |
-| `scripts/check-mysql.bat`   | Test MySQL connection       |
-
----
-
-## 📚 Documentation
-
-Detailed documentation is available in the [`docs/`](docs/) directory:
-
-| Document                                                   | Description                        |
-| ---------------------------------------------------------- | ---------------------------------- |
-| [Setup Guide](docs/SETUP_GUIDE.md)                         | Initial project setup instructions |
-| [Docker Setup](docs/DOCKER_SETUP.md)                       | Docker configuration & running     |
-| [Database Schema](docs/DATABASE_SCHEMA.md)                 | Complete database structure        |
-| [Architecture](docs/ARCHITECTURE.md)                       | System architecture overview       |
-| [API Documentation](docs/API_DOCUMENTATION.md)             | Full API endpoint reference        |
-| [AI Integration](docs/AI_INTEGRATION.md)                   | AI service integration details     |
-| [Deployment](docs/DEPLOYMENT.md)                           | Production deployment guide        |
-| [Email Setup](docs/EMAIL_SETUP.md)                         | Email configuration guide          |
-| [Quote to Booking](docs/QUOTE_TO_BOOKING_WORKFLOW.md)      | Quote/booking workflow             |
-| [Customer Portal Testing](docs/CUSTOMER_PORTAL_TESTING.md) | Portal testing guide               |
-
----
 
 ## 🤝 Contributing
 

@@ -234,11 +234,9 @@ export const getCustomerPayments = async () => {
 };
 
 export const submitCustomerPayment = async (paymentData) => {
-  const response = await axios.post(
-    `${API_BASE_URL}/payments`,
-    paymentData,
-    { headers: getCustomerAuthHeaders() }
-  );
+  const response = await axios.post(`${API_BASE_URL}/payments`, paymentData, {
+    headers: getCustomerAuthHeaders(),
+  });
   return response.data;
 };
 
@@ -247,7 +245,8 @@ export const getCustomerShipments = async () => {
   try {
     const bookings = await getCustomerBookings();
     // Handle paginated response: { data: { data: [...], meta: {...} } }
-    const bookingsData = bookings?.data?.data || bookings?.data || bookings || [];
+    const bookingsData =
+      bookings?.data?.data || bookings?.data || bookings || [];
     if (!Array.isArray(bookingsData)) return { data: [] };
 
     // Get shipment details for each booking
@@ -302,9 +301,12 @@ export const getCustomerDashboardStats = async () => {
     ]);
 
     const quotesData = quotes?.data?.data || quotes?.data || quotes || [];
-    const bookingsData = bookings?.data?.data || bookings?.data || bookings || [];
-    const documentsData = documents?.data?.data || documents?.data || documents || [];
-    const paymentsData = payments?.data?.data || payments?.data || payments || [];
+    const bookingsData =
+      bookings?.data?.data || bookings?.data || bookings || [];
+    const documentsData =
+      documents?.data?.data || documents?.data || documents || [];
+    const paymentsData =
+      payments?.data?.data || payments?.data || payments || [];
 
     // Calculate stats
     const activeShipments = bookingsData.filter((booking) =>
@@ -317,7 +319,11 @@ export const getCustomerDashboardStats = async () => {
 
     // Calculate balance from bookings (more reliable than payment records)
     const totalBalance = bookingsData.reduce((sum, booking) => {
-      const balance = parseFloat(booking.balance_amount ?? (parseFloat(booking.total_amount || 0) - parseFloat(booking.paid_amount || 0)));
+      const balance = parseFloat(
+        booking.balance_amount ??
+          parseFloat(booking.total_amount || 0) -
+            parseFloat(booking.paid_amount || 0),
+      );
       return sum + (balance > 0 ? balance : 0);
     }, 0);
 
