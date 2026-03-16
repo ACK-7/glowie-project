@@ -21,8 +21,10 @@ import {
   FaBan,
   FaCheckDouble,
   FaPlus,
+  FaFileInvoiceDollar,
 } from "react-icons/fa";
 import StatCard from "../../components/Admin/StatCard";
+import InvoiceModal from "../../components/Admin/InvoiceModal";
 import {
   getFinanceStats,
   getPayments,
@@ -49,6 +51,8 @@ const FinanceDashboard = () => {
     end_date: "",
   });
   const [exporting, setExporting] = useState(false);
+  const [invoicePayment, setInvoicePayment] = useState(null);
+  const [invoiceType, setInvoiceType] = useState("invoice");
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -883,6 +887,22 @@ const FinanceDashboard = () => {
                               icon: <FaEye />,
                               onClick: () => handleViewPayment(payment),
                             },
+                            {
+                              label: "Generate Invoice",
+                              icon: <FaFileInvoiceDollar />,
+                              onClick: () => {
+                                setInvoiceType("invoice");
+                                setInvoicePayment(payment);
+                              },
+                            },
+                            payment.status === "completed" && {
+                              label: "Download Receipt",
+                              icon: <FaDownload />,
+                              onClick: () => {
+                                setInvoiceType("receipt");
+                                setInvoicePayment(payment);
+                              },
+                            },
                             payment.status === "pending" && {
                               label: "Mark Completed",
                               icon: <FaCheckDouble />,
@@ -1262,6 +1282,15 @@ const FinanceDashboard = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Invoice/Receipt Modal */}
+      {invoicePayment && (
+        <InvoiceModal
+          payment={invoicePayment}
+          type={invoiceType}
+          onClose={() => setInvoicePayment(null)}
+        />
       )}
     </div>
   );

@@ -124,6 +124,9 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->prefix('admin')->group(fun
     // Auth
     Route::post('/logout', [AuthController::class, 'adminLogout']);
     
+    // AI Admin Assistant
+    Route::post('/ai-assistant', [ChatbotController::class, 'adminAssistant']);
+
     // Dashboard - New dedicated dashboard endpoints
     Route::prefix('dashboard')->group(function () {
         Route::get('/test', [DashboardController::class, 'test']);

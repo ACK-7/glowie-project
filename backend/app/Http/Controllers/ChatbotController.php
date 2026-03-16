@@ -64,8 +64,119 @@ class ChatbotController extends BaseApiController
     }
 
     /**
+     * Handle admin AI assistant query with business context
+     */
+    public function adminAssistant(Request $request): JsonResponse
+    {
+        try {
+            $validatedData = $this->validateRequest($request, [
+                'message' => 'required|string|max:2000',
+                'context' => 'nullable|string',
+            ]);
+
+            $query = $validatedData['message'];
+            $queryLower = strtolower($query);
+
+            // Gather live business metrics for AI context
+            $metrics = $this->getBusinessMetrics($queryLower);
+
+            $contextPrefix = "[ADMIN ASSISTANT] Business Context:\n" . $metrics . "\n\nAdmin Question: ";
+
+            try {
+                $response = $this->langGraphService->getSupportResponse(
+                    $contextPrefix . $query,
+                    0,
+                    null
+                );
+
+                return $this->successResponse([
+                    'response' => $response['response'] ?? $response['message'] ?? $this->getAdminFallbackResponse($query, $metrics),
+                ]);
+            } catch (\Exception $aiError) {
+                Log::warning('AI service unavailable for admin assistant', ['error' => $aiError->getMessage()]);
+
+                return $this->successResponse([
+                    'response' => $this->getAdminFallbackResponse($query, $metrics),
+                ]);
+            }
+        } catch (Exception $e) {
+            Log::error('Admin AI assistant error', ['error' => $e->getMessage()]);
+
+            return $this->successResponse([
+                'response' => 'I encountered an error processing your request. Please try again.',
+            ]);
+        }
+    }
+
+    /**
+     * Gather live business metrics for AI context
+     */
+    private function getBusinessMetrics(string $queryLower): string
+    {
+        $metrics = [];
+
+        try {
+            $bookingModel = new \App\Models\Booking();
+            $paymentModel = new \App\Models\Payment();
+            $shipmentModel = new \App\Models\Shipment();
+            $customerModel = new \App\Models\Customer();
+
+            $totalBookings = $bookingModel->count();
+            $pendingBookings = $bookingModel->where('status', 'pending')->count();
+            $activeShipments = $shipmentModel->whereNotIn('status', ['delivered', 'cancelled'])->count();
+            $delayedShipments = $shipmentModel->where('status', 'delayed')->count();
+            $totalRevenue = $paymentModel->where('status', 'completed')->sum('amount');
+            $pendingPayments = $paymentModel->where('status', 'pending')->sum('amount');
+            $totalCustomers = $customerModel->count();
+            $recentBookings = $bookingModel->where('created_at', '>=', now()->subDays(30))->count();
+
+            $metrics[] = "Total Bookings: {$totalBookings} ({$recentBookings} in last 30 days)";
+            $metrics[] = "Pending Bookings: {$pendingBookings}";
+            $metrics[] = "Active Shipments: {$activeShipments}";
+            $metrics[] = "Delayed Shipments: {$delayedShipments}";
+            $metrics[] = "Total Revenue (Completed): $" . number_format($totalRevenue, 2);
+            $metrics[] = "Pending Payments: $" . number_format($pendingPayments, 2);
+            $metrics[] = "Total Customers: {$totalCustomers}";
+        } catch (\Exception $e) {
+            $metrics[] = "Unable to fetch some metrics: " . $e->getMessage();
+        }
+
+        return implode("\n", $metrics);
+    }
+
+    /**
+     * Admin-specific fallback with live data
+     */
+    private function getAdminFallbackResponse(string $query, string $metrics): string
+    {
+        $queryLower = strtolower($query);
+
+        if (str_contains($queryLower, 'revenue') || str_contains($queryLower, 'financial') || str_contains($queryLower, 'money') || str_contains($queryLower, 'payment')) {
+            return "📊 **Financial Overview**\n\nHere are your current financial metrics:\n\n{$metrics}\n\nFor detailed breakdowns, visit the Finance Dashboard. You can export payment reports as CSV or PDF from there.";
+        }
+
+        if (str_contains($queryLower, 'delay') || str_contains($queryLower, 'late') || str_contains($queryLower, 'overdue')) {
+            return "⚠️ **Shipment Delay Report**\n\n{$metrics}\n\n**Recommendations:**\n• Review delayed shipments in the Shipment Management page\n• Contact carriers for updated ETAs\n• Notify affected customers proactively\n• Consider alternative routing for pending shipments";
+        }
+
+        if (str_contains($queryLower, 'improve') || str_contains($queryLower, 'suggest') || str_contains($queryLower, 'optimize') || str_contains($queryLower, 'insight')) {
+            return "💡 **Operational Insights**\n\n{$metrics}\n\n**Suggestions:**\n• Focus on converting pending bookings to confirmed\n• Follow up on pending payments to improve cash flow\n• Monitor delayed shipments and update customers\n• Review carrier performance for optimization\n• Consider promotional offers for repeat customers";
+        }
+
+        if (str_contains($queryLower, 'customer') || str_contains($queryLower, 'client')) {
+            return "👥 **Customer Summary**\n\n{$metrics}\n\n**Actions:**\n• Check customers requiring attention in the Customers page\n• Follow up with customers who have pending documents\n• Send reminders for outstanding payments";
+        }
+
+        if (str_contains($queryLower, 'report') || str_contains($queryLower, 'summary')) {
+            return "📋 **Business Summary**\n\n{$metrics}\n\nFor detailed reports, visit the Reports Hub where you can generate:\n• Revenue Reports\n• Operational Metrics\n• Customer Analytics\n• Shipment Performance";
+        }
+
+        return "📊 **Current Business Metrics**\n\n{$metrics}\n\nI can help you with:\n• **Revenue & payments** — financial summaries and analysis\n• **Shipment delays** — identify and resolve delays\n• **Operational insights** — suggestions for improvement\n• **Customer analytics** — customer trends and actions\n• **Reports** — generate business summaries\n\nWhat would you like to know more about?";
+    }
+
+    /**
      * Get fallback response when AI is unavailable
-     * 
+     *
      * @param string $query
      * @return string
      */

@@ -596,7 +596,36 @@ class NotificationService
                 }
             }
 
-            // FOR DEVELOPMENT: Log other email types
+            // Send emails for all other notification types using GeneralNotificationMail
+            $emailTypes = [
+                'booking_created', 'booking_status_updated', 'quote_converted',
+                'shipment_created', 'shipment_status_updated', 'shipment_delayed',
+                'delivery_confirmation', 'payment_completed', 'missing_documents',
+                'customer_welcome', 'password_reset', 'document_uploaded',
+                'document_approved', 'document_rejected', 'document_expired',
+            ];
+
+            if (in_array($notification->type, $emailTypes)) {
+                $customerName = $customer->first_name ?? 'Customer';
+
+                \Illuminate\Support\Facades\Mail::to($customer->email)
+                    ->send(new \App\Mail\GeneralNotificationMail(
+                        $notification->title,
+                        $notification->message,
+                        $customerName,
+                        $customer->email,
+                    ));
+
+                Log::info('✅ Email Sent via GeneralNotificationMail', [
+                    'to' => $customer->email,
+                    'type' => $notification->type,
+                    'subject' => $notification->title,
+                ]);
+
+                return;
+            }
+
+            // FOR DEVELOPMENT: Log remaining email types
             Log::info('📧 EMAIL NOTIFICATION (Development Mode)', [
                 'to' => $customer->email,
                 'customer_name' => $customer->first_name ?? 'Customer',

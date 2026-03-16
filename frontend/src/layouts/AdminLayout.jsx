@@ -2,6 +2,7 @@ import React from "react";
 import { Outlet } from "react-router-dom";
 import AdminSidebar from "../components/Admin/AdminSidebar";
 import AdminTopBar from "../components/Admin/AdminTopBar";
+import AdminAIAssistant from "../components/Admin/AdminAIAssistant";
 
 const AdminLayout = () => {
   return (
@@ -15,6 +16,8 @@ const AdminLayout = () => {
           <Outlet />
         </main>
       </div>
+
+      <AdminAIAssistant />
     </div>
   );
 };

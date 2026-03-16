@@ -20,6 +20,7 @@ import {
   FaSearch,
   FaSignOutAlt,
   FaSpinner,
+  FaFileInvoiceDollar,
 } from "react-icons/fa";
 import { showAlert } from "../utils/sweetAlert";
 import { useCustomerAuth } from "../context/CustomerAuthContext";
@@ -28,6 +29,7 @@ import { useNavigate } from "react-router-dom";
 import authService from "../services/authService";
 import * as customerService from "../services/customerService";
 import DocumentUpload from "../components/Customer/DocumentUpload";
+import InvoiceModal from "../components/Admin/InvoiceModal";
 import TrackingMap from "../components/Customer/TrackingMap";
 import TrackingTimeline from "../components/Tracking/TrackingTimeline";
 import ManageBooking from "./ManageBooking";
@@ -60,6 +62,7 @@ const CustomerPortal = () => {
   const [paymentNotes, setPaymentNotes] = useState("");
   const [submittingPayment, setSubmittingPayment] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
+  const [receiptPayment, setReceiptPayment] = useState(null);
 
   // Auto-fill transaction reference when payment modal opens
   useEffect(() => {
@@ -1895,6 +1898,14 @@ const CustomerPortal = () => {
                               Pay Now
                             </button>
                           )}
+                          {payment.status === "completed" && (
+                            <button
+                              className="flex items-center gap-1 px-4 py-2 mt-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
+                              onClick={() => setReceiptPayment(payment)}
+                            >
+                              <FaFileInvoiceDollar /> View Receipt
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -2357,6 +2368,15 @@ const CustomerPortal = () => {
           booking={reviewBooking}
           onClose={() => setReviewBooking(null)}
           onSuccess={() => setReviewBooking(null)}
+        />
+      )}
+
+      {/* Payment Receipt Modal */}
+      {receiptPayment && (
+        <InvoiceModal
+          payment={receiptPayment}
+          type="receipt"
+          onClose={() => setReceiptPayment(null)}
         />
       )}
     </div>
