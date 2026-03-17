@@ -65,11 +65,16 @@ export const getCustomerBooking = async (id) => {
   return response.data;
 };
 
-export const confirmQuoteToBooking = async (quoteId, additionalData = {}) => {
+export const confirmQuoteToBooking = async (
+  quoteReference,
+  email,
+  additionalData = {},
+) => {
   const response = await axios.post(
     `${API_BASE_URL}/bookings`,
     {
-      quote_id: quoteId,
+      quote_reference: quoteReference,
+      email,
       ...additionalData,
     },
     {

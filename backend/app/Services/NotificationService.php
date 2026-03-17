@@ -134,7 +134,7 @@ class NotificationService
     {
         try {
             $customer = Customer::find($quote->customer_id);
-            $portalUrl = config('app.frontend_url', 'http://localhost:5173') . '/customer-portal';
+            $portalUrl = config('app.frontend_url', 'http://localhost:5173') . '/portal/dashboard';
             
             $message = "Thank you for requesting a quote with ShipWithGlowie Auto!\n\n";
             $message .= "Your quote {$quote->quote_reference} has been generated and is pending approval.\n\n";
@@ -194,7 +194,7 @@ class NotificationService
     {
         try {
             $customer = Customer::find($quote->customer_id);
-            $portalUrl = config('app.frontend_url', 'http://localhost:5173') . '/customer-portal';
+            $portalUrl = config('app.frontend_url', 'http://localhost:5173') . '/portal/dashboard';
             
             // Simple approval message - customer already has portal access
             $message = "Great news! Your quote {$quote->quote_reference} has been approved!\n\n";

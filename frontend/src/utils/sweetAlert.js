@@ -34,6 +34,39 @@ const showAlertFunction = (title, text, type = 'info') => {
   });
 };
 
+const showHtml = (title, html, type = 'info') => {
+  const config = {
+    success: {
+      icon: 'success',
+      confirmButtonColor: '#10B981'
+    },
+    error: {
+      icon: 'error',
+      confirmButtonColor: '#EF4444'
+    },
+    warning: {
+      icon: 'warning',
+      confirmButtonColor: '#F59E0B'
+    },
+    info: {
+      icon: 'info',
+      confirmButtonColor: '#3B82F6'
+    }
+  };
+
+  const selectedConfig = config[type] || config.info;
+
+  return Swal.fire({
+    icon: selectedConfig.icon,
+    title,
+    html,
+    confirmButtonColor: selectedConfig.confirmButtonColor,
+    background: '#1a1f28',
+    color: '#ffffff',
+    confirmButtonText: 'OK'
+  });
+};
+
 export const showConfirm = (title, text, type = 'question', confirmText = 'Yes', cancelText = 'Cancel') => {
   const iconConfig = {
     question: 'question',
@@ -105,6 +138,7 @@ export const showAlert = Object.assign(showAlertFunction, {
   error: (title, text) => showAlertFunction(title, text, 'error'),
   warning: (title, text) => showAlertFunction(title, text, 'warning'),
   info: (title, text) => showAlertFunction(title, text, 'info'),
+  html: (title, html, type = 'info') => showHtml(title, html, type),
   confirm: showConfirm,
   loading: showLoading,
   close: closeAlert,
@@ -117,6 +151,7 @@ export const sweetAlert = {
   error: (title, text) => showAlertFunction(title, text, 'error'),
   warning: (title, text) => showAlertFunction(title, text, 'warning'),
   info: (title, text) => showAlertFunction(title, text, 'info'),
+  html: (title, html, type = 'info') => showHtml(title, html, type),
   confirm: showConfirm,
   loading: showLoading,
   close: closeAlert,

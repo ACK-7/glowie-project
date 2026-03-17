@@ -12,7 +12,7 @@ import io
 from typing import Optional
 from PIL import Image
 import pytesseract
-from pdf2image import convert_from_bytes
+import pdfplumber
 from fastapi import UploadFile
 
 
@@ -98,23 +98,20 @@ class DocumentAgent:
             raise
     
     def _extract_from_pdf(self, pdf_content: bytes) -> str:
-        """Extract text from PDF using OCR"""
+        """Extract text from PDF using text layer (no Poppler dependency)"""
         try:
-            # Convert PDF pages to images
-            images = convert_from_bytes(pdf_content, dpi=300)
-            
-            # Extract text from each page
             text_parts = []
-            for i, image in enumerate(images):
-                logger.info(f"Processing PDF page {i + 1}/{len(images)}")
-                page_text = pytesseract.image_to_string(image, lang='eng')
-                text_parts.append(page_text)
-            
-            full_text = '\n\n'.join(text_parts)
-            logger.info(f"Extracted {len(full_text)} characters from {len(images)} PDF pages")
-            
+            with pdfplumber.open(io.BytesIO(pdf_content)) as pdf:
+                for i, page in enumerate(pdf.pages):
+                    page_text = page.extract_text() or ""
+                    logger.info(f"Processing PDF page {i + 1}/{len(pdf.pages)} (chars: {len(page_text)})")
+                    if page_text:
+                        text_parts.append(page_text)
+
+            full_text = "\n\n".join(text_parts).strip()
+            logger.info(f"Extracted {len(full_text)} characters from {len(text_parts)} PDF pages with text layer")
             return full_text
-            
+
         except Exception as e:
             logger.error(f"PDF extraction error: {str(e)}")
             raise

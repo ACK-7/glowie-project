@@ -8,6 +8,146 @@ const API_BASE_URL =
 const STORAGE_KEY = "glowie_chat_history";
 const SESSION_TTL = 60 * 60 * 1000; // 1 hour
 
+const applyInlineFormatting = (text) => {
+  if (!text) return text;
+  const segments = text.split(/(\*\*[^*]+\*\*|_[^_]+_|`[^`]+`)/g);
+  return segments.map((seg, i) => {
+    if (seg.startsWith("**") && seg.endsWith("**")) {
+      return <strong key={i}>{seg.slice(2, -2)}</strong>;
+    }
+    if (seg.startsWith("_") && seg.endsWith("_")) {
+      return <em key={i}>{seg.slice(1, -1)}</em>;
+    }
+    if (seg.startsWith("`") && seg.endsWith("`")) {
+      return (
+        <code
+          key={i}
+          className="px-1 py-0.5 rounded bg-gray-100 border border-gray-200 text-[0.85em]"
+        >
+          {seg.slice(1, -1)}
+        </code>
+      );
+    }
+    return <span key={i}>{seg}</span>;
+  });
+};
+
+const tryParseJson = (value) => {
+  try {
+    const parsed = JSON.parse(value);
+    return typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const renderMessageContent = (text) => {
+  if (!text) return null;
+
+  const parsedJson = tryParseJson(text);
+  if (parsedJson) {
+    return (
+      <pre className="text-xs font-mono whitespace-pre-wrap break-words bg-gray-50 border border-gray-200 rounded-lg p-3">
+        {JSON.stringify(parsedJson, null, 2)}
+      </pre>
+    );
+  }
+
+  const listMatchers = [/^[-*•]\s+/, /^\d+[\).\s]/];
+
+  const paragraphs = text.split(/\n\s*\n/).filter(Boolean);
+
+  return paragraphs.map((block, idx) => {
+    const lines = block.split("\n").filter(Boolean);
+
+    const isTable =
+      lines.length >= 2 &&
+      /^\s*\|.*\|\s*$/.test(lines[0]) &&
+      /^\s*\|?\s*[-:]+\s*\|/.test(lines[1]);
+
+    if (isTable) {
+      const rows = lines.map((line) =>
+        line
+          .split("|")
+          .map((c) => c.trim())
+          .filter((c) => c),
+      );
+      const [header = [], ...body] = rows;
+      return (
+        <div key={idx} className="overflow-x-auto">
+          <table className="min-w-full border border-gray-200 text-xs rounded-lg overflow-hidden">
+            <thead className="bg-gray-50">
+              <tr>
+                {header.map((cell, i) => (
+                  <th
+                    key={i}
+                    className="px-2 py-2 text-left font-semibold border-b border-gray-200"
+                  >
+                    {applyInlineFormatting(cell)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {body.map((row, rIdx) => (
+                <tr key={rIdx} className="odd:bg-white even:bg-gray-50">
+                  {row.map((cell, cIdx) => (
+                    <td key={cIdx} className="px-2 py-2 align-top border-b border-gray-200">
+                      {applyInlineFormatting(cell)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    const headingMatch = lines[0].match(/^(#{2,6})\s+(.*)/);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      const content = headingMatch[2];
+      const HeadingTag = `h${Math.min(level, 6)}`;
+      return (
+        <HeadingTag key={idx} className="font-semibold text-gray-800 text-sm mt-1 mb-1">
+          {applyInlineFormatting(content)}
+        </HeadingTag>
+      );
+    }
+
+    const isList =
+      lines.length > 1 &&
+      lines.every((line) => listMatchers.some((re) => re.test(line.trim())));
+
+    if (isList) {
+      return (
+        <ul key={idx} className="list-disc list-inside space-y-1">
+          {lines.map((line, i) => {
+            const cleaned = line
+              .replace(/^[-*•]\s+/, "")
+              .replace(/^\d+[\).\s]+/, "");
+            return <li key={i}>{applyInlineFormatting(cleaned)}</li>;
+          })}
+        </ul>
+      );
+    }
+
+    const lineFragments = lines.map((line, i) => (
+      <span key={i}>
+        {applyInlineFormatting(line)}
+        {i < lines.length - 1 ? <br /> : null}
+      </span>
+    ));
+
+    return (
+      <p key={idx} className="mb-2 last:mb-0">
+        {lineFragments}
+      </p>
+    );
+  });
+};
+
 const loadChatHistory = () => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -180,9 +320,9 @@ const AIChatbot = () => {
                       : "bg-white text-gray-800 shadow-sm border border-gray-200"
                   }`}
                 >
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                    {message.text}
-                  </p>
+                  <div className="text-sm leading-relaxed space-y-2">
+                    {renderMessageContent(message.text)}
+                  </div>
                   <p
                     className={`text-xs mt-1 ${
                       message.type === "user"

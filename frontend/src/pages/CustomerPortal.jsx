@@ -25,7 +25,7 @@ import {
 import { showAlert } from "../utils/sweetAlert";
 import { useCustomerAuth } from "../context/CustomerAuthContext";
 import { useNotifications } from "../context/NotificationContextImpl";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import authService from "../services/authService";
 import * as customerService from "../services/customerService";
 import DocumentUpload from "../components/Customer/DocumentUpload";
@@ -75,6 +75,8 @@ const CustomerPortal = () => {
   const { customer, isAuthenticated, logout } = useCustomerAuth();
   const { unreadCount, markAllRead } = useNotifications();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [pendingUrlConfirmation, setPendingUrlConfirmation] = useState(false);
 
   // Load customer data on component mount
   useEffect(() => {
@@ -82,6 +84,20 @@ const CustomerPortal = () => {
       loadAllCustomerData();
     }
   }, [isAuthenticated]);
+
+  // Allow quote confirmation via email link (?confirm_quote=ID)
+  useEffect(() => {
+    const confirmId = searchParams.get("confirm_quote");
+    if (
+      isAuthenticated &&
+      confirmId &&
+      !pendingUrlConfirmation &&
+      !isLoading
+    ) {
+      setPendingUrlConfirmation(true);
+      confirmQuote(confirmId).finally(() => setPendingUrlConfirmation(false));
+    }
+  }, [isAuthenticated, searchParams, pendingUrlConfirmation, isLoading]);
 
   // Auto-select first booking when switching to tracking tab
   useEffect(() => {
@@ -125,6 +141,19 @@ const CustomerPortal = () => {
     const interval = setInterval(refreshShipments, 30000);
     return () => clearInterval(interval);
   }, [activeTab]);
+
+  const dedupeByKey = (items, key) => {
+    if (!Array.isArray(items)) return [];
+    const seen = new Set();
+    const result = [];
+    items.forEach((item) => {
+      const dedupeKey = item?.[key] || item?.id;
+      if (!dedupeKey || seen.has(dedupeKey)) return;
+      seen.add(dedupeKey);
+      result.push(item);
+    });
+    return result;
+  };
 
   const loadAllCustomerData = async () => {
     setIsLoading(true);
@@ -172,6 +201,12 @@ const CustomerPortal = () => {
       // Set all state with safe data
       const profile = profileData?.data || null;
       setCustomerProfile(profile);
+      const customerId =
+        profile?.id ||
+        profile?.customer_id ||
+        profileData?.id ||
+        customer?.id ||
+        null;
 
       // Extract bookings - handle nested data structure
       const extractedBookings =
@@ -180,29 +215,69 @@ const CustomerPortal = () => {
       // Extract quotes - API returns {success: true, data: {data: [...quotes...], meta: {...}}}
       const extractedQuotes = quotesData?.data?.data || quotesData?.data || [];
 
-      setQuotes(Array.isArray(extractedQuotes) ? extractedQuotes : []);
-      setBookings(Array.isArray(extractedBookings) ? extractedBookings : []);
-      setDocuments(
-        Array.isArray(documentsData.data)
-          ? documentsData.data
-          : Array.isArray(documentsData)
-            ? documentsData
-            : [],
+      // Filter to the authenticated customer and dedupe by stable references
+      const filteredQuotes = (Array.isArray(extractedQuotes)
+        ? extractedQuotes
+        : []
+      ).filter(
+        (q) =>
+          !customerId ||
+          q.customer_id === customerId ||
+          q.customer?.id === customerId,
       );
-      setPayments(
-        Array.isArray(paymentsData.data)
-          ? paymentsData.data
-          : Array.isArray(paymentsData)
-            ? paymentsData
-            : [],
+
+      const filteredBookings = (Array.isArray(extractedBookings)
+        ? extractedBookings
+        : []
+      ).filter(
+        (b) =>
+          !customerId ||
+          b.customer_id === customerId ||
+          b.customer?.id === customerId,
       );
-      setShipments(
-        Array.isArray(shipmentsData.data)
-          ? shipmentsData.data
-          : Array.isArray(shipmentsData)
-            ? shipmentsData
-            : [],
+
+      const filteredDocuments = (Array.isArray(documentsData.data)
+        ? documentsData.data
+        : Array.isArray(documentsData)
+          ? documentsData
+          : []
+      ).filter(
+        (d) =>
+          !customerId ||
+          d.customer_id === customerId ||
+          d.customer?.id === customerId,
       );
+
+      const filteredPayments = (Array.isArray(paymentsData.data)
+        ? paymentsData.data
+        : Array.isArray(paymentsData)
+          ? paymentsData
+          : []
+      ).filter(
+        (p) =>
+          !customerId ||
+          p.customer_id === customerId ||
+          p.customer?.id === customerId,
+      );
+
+      const filteredShipments = (Array.isArray(shipmentsData.data)
+        ? shipmentsData.data
+        : Array.isArray(shipmentsData)
+          ? shipmentsData
+          : []
+      ).filter(
+        (s) =>
+          !customerId ||
+          s.customer_id === customerId ||
+          s.customer?.id === customerId,
+      );
+
+      // Deduplicate to prevent duplicated quotes/bookings causing triple fees
+      setQuotes(dedupeByKey(filteredQuotes, "quote_reference"));
+      setBookings(dedupeByKey(filteredBookings, "booking_reference"));
+      setDocuments(dedupeByKey(filteredDocuments, "id"));
+      setPayments(dedupeByKey(filteredPayments, "payment_reference"));
+      setShipments(dedupeByKey(filteredShipments, "booking_reference"));
       setDashboardStats(statsData.data || statsData || {});
     } catch (error) {
       console.error("❌ Error loading customer data:", error);
@@ -224,12 +299,33 @@ const CustomerPortal = () => {
   const confirmQuote = async (quoteId) => {
     setIsLoading(true);
     try {
-      await customerService.confirmQuoteToBooking(quoteId);
+      const quote =
+        quotes.find(
+          (q) => q.id === quoteId || q.quote_reference === quoteId,
+        ) || null;
+      const quoteReference = quote?.quote_reference || quoteId;
+      const email =
+        customer?.email ||
+        customerProfile?.email ||
+        quote?.customer?.email ||
+        null;
+
+      if (!quoteReference || !email) {
+        throw new Error("Missing quote reference or customer email.");
+      }
+
+      await customerService.confirmQuoteToBooking(quoteReference, email);
       showAlert.success(
         "Quote Confirmed!",
         "Your quote has been converted to a booking successfully.",
       );
-      loadAllCustomerData(); // Reload all data
+      // Mark this quote as converted locally to avoid double creation while reload is happening
+      setQuotes((prev) =>
+        prev.map((q) =>
+          q.id === quoteId ? { ...q, status: "converted" } : q,
+        ),
+      );
+      await loadAllCustomerData(); // Reload all data
     } catch (error) {
       console.error("Error confirming quote:", error);
       showAlert.error(

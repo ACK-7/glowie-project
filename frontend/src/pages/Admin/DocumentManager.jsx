@@ -325,29 +325,46 @@ const DocumentManager = () => {
           const formattedKey = key
             .replace(/_/g, " ")
             .replace(/\b\w/g, (l) => l.toUpperCase());
-          return `<div class="flex justify-between py-2 border-b border-gray-200">
-            <span class="font-medium text-gray-700">${formattedKey}:</span>
-            <span class="text-gray-900">${value || "N/A"}</span>
+
+          const isObject =
+            value && typeof value === "object" && !Array.isArray(value);
+          const isArray = Array.isArray(value);
+          let renderedValue = value;
+
+          if (isObject || isArray) {
+            renderedValue = `<pre class="whitespace-pre-wrap break-words text-xs text-gray-100 bg-white/5 border border-white/10 rounded-md p-2">${JSON.stringify(
+              value,
+              null,
+              2,
+            )}</pre>`;
+          } else {
+            renderedValue = `<span class="text-gray-100">${value || "N/A"}</span>`;
+          }
+
+          return `<div class="flex justify-between gap-3 py-2 border-b border-white/10 text-gray-100">
+            <span class="font-medium text-gray-200">${formattedKey}:</span>
+            <div class="text-right flex-1">${renderedValue}</div>
           </div>`;
         })
         .join("");
 
-      await showAlert.info(
+      await showAlert.html(
         "🤖 AI Extracted Data",
-        `<div class="text-left">
-          <div class="mb-4 p-3 bg-blue-50 rounded-lg">
-            <p class="text-sm text-blue-800">
+        `<div class="text-left text-gray-100">
+          <div class="mb-4 p-3 bg-white/10 rounded-lg border border-white/10">
+            <p class="text-sm text-blue-100">
               <strong>Confidence Score:</strong> ${(confidenceScore * 100).toFixed(1)}%
             </p>
-            <div class="mt-2 bg-blue-200 rounded-full h-2">
-              <div class="bg-blue-600 h-2 rounded-full" style="width: ${confidenceScore * 100}%"></div>
+            <div class="mt-2 bg-white/10 rounded-full h-2">
+              <div class="bg-blue-400 h-2 rounded-full" style="width: ${confidenceScore * 100}%"></div>
             </div>
           </div>
-          <div class="max-h-96 overflow-auto">
-            ${dataHtml || '<p class="text-gray-500">No data extracted</p>'}
+          <div class="max-h-96 overflow-auto pr-1">
+            ${dataHtml || '<p class="text-gray-300">No data extracted</p>'}
           </div>
-          <p class="mt-4 text-xs text-gray-500">
-            💡 Tip: Review the extracted data and manually verify important fields
+          <p class="mt-4 text-xs text-gray-300 flex items-center gap-2">
+            <span>💡</span>
+            <span>Tip: Review the extracted data and manually verify important fields</span>
           </p>
         </div>`,
         "info",

@@ -22,7 +22,7 @@ class QuoteCreatedWithCredentialsMail extends Mailable
     {
         $this->quote = $quote;
         $this->temporaryPassword = $temporaryPassword;
-        $this->portalUrl = config('app.frontend_url', 'http://localhost:5173') . '/customer-portal';
+        $this->portalUrl = config('app.frontend_url', 'http://localhost:5173') . '/portal/dashboard';
     }
 
     /**

@@ -25,7 +25,7 @@ class QuoteApprovedMail extends Mailable
     {
         $this->quote = $quote;
         $this->temporaryPassword = $temporaryPassword;
-        $this->customerPortalUrl = env('FRONTEND_URL', config('app.url', 'http://localhost:5173')) . '/customer-portal';
+        $this->customerPortalUrl = env('FRONTEND_URL', config('app.url', 'http://localhost:5173')) . '/portal/dashboard';
     }
 
     /**
