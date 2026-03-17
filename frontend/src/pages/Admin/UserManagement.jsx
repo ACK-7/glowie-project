@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaEdit, FaTrash, FaSearch, FaUserShield, FaUserTie, FaUserCog } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaSearch, FaUserShield, FaUserTie, FaUserCog, FaSpinner } from 'react-icons/fa';
 import axios from 'axios';
+import { showAlert } from '../../utils/sweetAlert';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -23,6 +24,7 @@ const UserManagement = () => {
   });
 
   const [errors, setErrors] = useState({});
+  const [saving, setSaving] = useState(false);
 
   // Fetch users
   const fetchUsers = async () => {
@@ -87,6 +89,7 @@ const UserManagement = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
     
     try {
       if (modalMode === 'create') {
@@ -103,6 +106,8 @@ const UserManagement = () => {
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors);
       }
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -110,10 +115,14 @@ const UserManagement = () => {
     if (!confirm('Are you sure you want to delete this user?')) return;
     
     try {
+      showAlert.loading('Deleting...', 'Please wait while we delete the user.');
       await axios.delete(`${API_BASE_URL}/admin/users/${userId}`);
+      showAlert.close();
+      showAlert.success('Deleted', 'User deleted successfully');
       fetchUsers();
     } catch (error) {
-      alert(error.response?.data?.message || 'Error deleting user');
+      showAlert.close();
+      showAlert.error('Error', error.response?.data?.message || 'Error deleting user');
     }
   };
 
@@ -335,15 +344,24 @@ const UserManagement = () => {
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition"
+                  disabled={saving}
+                  className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white rounded-lg transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition"
+                  disabled={saving}
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 text-white rounded-lg transition flex items-center justify-center gap-2"
                 >
-                  {modalMode === 'create' ? 'Create User' : 'Save Changes'}
+                  {saving ? (
+                    <>
+                      <FaSpinner className="animate-spin" />
+                      {modalMode === 'create' ? 'Creating...' : 'Saving...'}
+                    </>
+                  ) : (
+                    modalMode === 'create' ? 'Create User' : 'Save Changes'
+                  )}
                 </button>
               </div>
             </form>

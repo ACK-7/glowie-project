@@ -316,11 +316,13 @@ const QuoteManagement = () => {
 
   const handleApprove = async (quote) => {
     try {
-      console.log("Approving quote:", quote);
+      showAlert.loading("Approving...", "Processing quote approval...");
       await approveQuote(quote.id, "Quote approved by admin");
+      showAlert.close();
       await showAlert("Success", "Quote approved successfully", "success");
       fetchData();
     } catch (error) {
+      showAlert.close();
       console.error("Approve failed:", error);
       await showAlert("Error", "Failed to approve quote", "error");
     }
@@ -335,10 +337,13 @@ const QuoteManagement = () => {
 
     if (confirmed) {
       try {
+        showAlert.loading("Rejecting...", "Processing quote rejection...");
         await rejectQuote(quote.id, "Quote rejected by admin");
+        showAlert.close();
         await showAlert("Success", "Quote rejected successfully", "success");
         fetchData();
       } catch (error) {
+        showAlert.close();
         console.error("Reject failed:", error);
         await showAlert("Error", "Failed to reject quote", "error");
       }
@@ -354,7 +359,9 @@ const QuoteManagement = () => {
 
     if (confirmed) {
       try {
+        showAlert.loading("Converting...", "Converting quote to booking...");
         await convertQuoteToBooking(quote.id);
+        showAlert.close();
         await showAlert(
           "Success",
           "Quote converted to booking successfully",
@@ -362,6 +369,7 @@ const QuoteManagement = () => {
         );
         fetchData();
       } catch (error) {
+        showAlert.close();
         console.error("Convert failed:", error);
         await showAlert("Error", "Failed to convert quote to booking", "error");
       }
@@ -383,12 +391,15 @@ const QuoteManagement = () => {
         "Cancel",
       );
       if (confirmed) {
+        showAlert.loading("Deleting...", "Please wait while we delete the quote.");
         const { deleteQuote } = await import("../../services/adminService");
         await deleteQuote(quote.id);
+        showAlert.close();
         await showAlert("Success", "Quote deleted successfully", "success");
         fetchData();
       }
     } catch (err) {
+      showAlert.close();
       console.error("Delete failed:", err);
       await showAlert("Error", "Failed to delete quote", "error");
     }

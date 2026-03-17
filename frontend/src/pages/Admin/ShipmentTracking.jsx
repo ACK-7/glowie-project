@@ -168,10 +168,13 @@ const ShipmentTracking = () => {
 
     if (confirmed) {
       try {
+        showAlert.loading("Deleting...", "Please wait while we delete the shipment.");
         await deleteShipment(shipment.id);
+        showAlert.close();
         await showAlert("Success", "Shipment deleted successfully", "success");
         fetchData();
       } catch (error) {
+        showAlert.close();
         console.error("Delete failed:", error);
         await showAlert("Error", "Failed to delete shipment", "error");
       }
@@ -180,7 +183,9 @@ const ShipmentTracking = () => {
 
   const handleStatusUpdate = async (shipment, newStatus) => {
     try {
+      showAlert.loading("Updating...", `Changing status to ${newStatus.replace("_", " ")}...`);
       await updateShipmentStatus(shipment.id, newStatus);
+      showAlert.close();
       await showAlert(
         "Success",
         "Shipment status updated successfully",
@@ -188,6 +193,7 @@ const ShipmentTracking = () => {
       );
       fetchData();
     } catch (error) {
+      showAlert.close();
       console.error("Status update failed:", error);
       await showAlert("Error", "Failed to update shipment status", "error");
     }

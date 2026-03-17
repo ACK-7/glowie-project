@@ -786,7 +786,12 @@ const CustomerPortal = () => {
                           className="btn-primary px-6 py-2 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <FaCheck />
-                          {isLoading ? "Saving..." : "Save Changes"}
+                          {isLoading ? (
+                            <>
+                              <FaSpinner className="animate-spin" />
+                              Saving...
+                            </>
+                          ) : "Save Changes"}
                         </button>
                         <button
                           onClick={handleCancelEdit}
@@ -905,7 +910,12 @@ const CustomerPortal = () => {
                   className="flex-1 btn-primary px-6 py-2 flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   <FaCheck />
-                  {isLoading ? "Changing..." : "Change Password"}
+                  {isLoading ? (
+                    <>
+                      <FaSpinner className="animate-spin" />
+                      Changing...
+                    </>
+                  ) : "Change Password"}
                 </button>
                 <button
                   onClick={handleCancelPasswordChange}
