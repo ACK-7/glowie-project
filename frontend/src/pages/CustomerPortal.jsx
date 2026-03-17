@@ -88,12 +88,7 @@ const CustomerPortal = () => {
   // Allow quote confirmation via email link (?confirm_quote=ID)
   useEffect(() => {
     const confirmId = searchParams.get("confirm_quote");
-    if (
-      isAuthenticated &&
-      confirmId &&
-      !pendingUrlConfirmation &&
-      !isLoading
-    ) {
+    if (isAuthenticated && confirmId && !pendingUrlConfirmation && !isLoading) {
       setPendingUrlConfirmation(true);
       confirmQuote(confirmId).finally(() => setPendingUrlConfirmation(false));
     }
@@ -216,9 +211,8 @@ const CustomerPortal = () => {
       const extractedQuotes = quotesData?.data?.data || quotesData?.data || [];
 
       // Filter to the authenticated customer and dedupe by stable references
-      const filteredQuotes = (Array.isArray(extractedQuotes)
-        ? extractedQuotes
-        : []
+      const filteredQuotes = (
+        Array.isArray(extractedQuotes) ? extractedQuotes : []
       ).filter(
         (q) =>
           !customerId ||
@@ -226,9 +220,8 @@ const CustomerPortal = () => {
           q.customer?.id === customerId,
       );
 
-      const filteredBookings = (Array.isArray(extractedBookings)
-        ? extractedBookings
-        : []
+      const filteredBookings = (
+        Array.isArray(extractedBookings) ? extractedBookings : []
       ).filter(
         (b) =>
           !customerId ||
@@ -236,11 +229,12 @@ const CustomerPortal = () => {
           b.customer?.id === customerId,
       );
 
-      const filteredDocuments = (Array.isArray(documentsData.data)
-        ? documentsData.data
-        : Array.isArray(documentsData)
-          ? documentsData
-          : []
+      const filteredDocuments = (
+        Array.isArray(documentsData.data)
+          ? documentsData.data
+          : Array.isArray(documentsData)
+            ? documentsData
+            : []
       ).filter(
         (d) =>
           !customerId ||
@@ -248,11 +242,12 @@ const CustomerPortal = () => {
           d.customer?.id === customerId,
       );
 
-      const filteredPayments = (Array.isArray(paymentsData.data)
-        ? paymentsData.data
-        : Array.isArray(paymentsData)
-          ? paymentsData
-          : []
+      const filteredPayments = (
+        Array.isArray(paymentsData.data)
+          ? paymentsData.data
+          : Array.isArray(paymentsData)
+            ? paymentsData
+            : []
       ).filter(
         (p) =>
           !customerId ||
@@ -260,11 +255,12 @@ const CustomerPortal = () => {
           p.customer?.id === customerId,
       );
 
-      const filteredShipments = (Array.isArray(shipmentsData.data)
-        ? shipmentsData.data
-        : Array.isArray(shipmentsData)
-          ? shipmentsData
-          : []
+      const filteredShipments = (
+        Array.isArray(shipmentsData.data)
+          ? shipmentsData.data
+          : Array.isArray(shipmentsData)
+            ? shipmentsData
+            : []
       ).filter(
         (s) =>
           !customerId ||
@@ -300,9 +296,8 @@ const CustomerPortal = () => {
     setIsLoading(true);
     try {
       const quote =
-        quotes.find(
-          (q) => q.id === quoteId || q.quote_reference === quoteId,
-        ) || null;
+        quotes.find((q) => q.id === quoteId || q.quote_reference === quoteId) ||
+        null;
       const quoteReference = quote?.quote_reference || quoteId;
       const email =
         customer?.email ||
@@ -321,9 +316,7 @@ const CustomerPortal = () => {
       );
       // Mark this quote as converted locally to avoid double creation while reload is happening
       setQuotes((prev) =>
-        prev.map((q) =>
-          q.id === quoteId ? { ...q, status: "converted" } : q,
-        ),
+        prev.map((q) => (q.id === quoteId ? { ...q, status: "converted" } : q)),
       );
       await loadAllCustomerData(); // Reload all data
     } catch (error) {
@@ -887,7 +880,9 @@ const CustomerPortal = () => {
                               <FaSpinner className="animate-spin" />
                               Saving...
                             </>
-                          ) : "Save Changes"}
+                          ) : (
+                            "Save Changes"
+                          )}
                         </button>
                         <button
                           onClick={handleCancelEdit}
@@ -1011,7 +1006,9 @@ const CustomerPortal = () => {
                       <FaSpinner className="animate-spin" />
                       Changing...
                     </>
-                  ) : "Change Password"}
+                  ) : (
+                    "Change Password"
+                  )}
                 </button>
                 <button
                   onClick={handleCancelPasswordChange}
